@@ -55,7 +55,11 @@ button.sug{padding:4px 9px;font-family:var(--font-data);font-size:.8rem;font-wei
 .ok{color:var(--ok-ink)}
 
 .wrap>*{min-width:0}
-.pick{display:flex;flex-wrap:wrap;gap:8px}
+.pick{display:grid;gap:10px}
+.pick select{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:inherit}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:5px 6px 5px 12px;font-size:.88rem}
+.chip button{border:0;background:none;color:var(--muted);font-size:1.1rem;padding:0 4px;cursor:pointer}
 .pick label{display:flex;gap:6px;align-items:center;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 10px;font-size:.88rem;cursor:pointer}
 .pick input{accent-color:var(--a);width:1rem;height:1rem}
 .tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
@@ -88,7 +92,7 @@ button.del{border:0;background:none;color:var(--muted);padding:0 4px;font-size:1
   <section class="card" aria-label="Choose machines">
     <h2>Machines to compare</h2>
     <div class="pick" id="pick"></div>
-    <div class="hint" id="pickmsg">Tick up to 4 machines.</div>
+    <div class="hint" id="pickmsg">Pick up to 4 machines.</div>
   </section>
   <div id="out"></div>
   <section class="card" aria-label="Add a machine">
@@ -185,16 +189,21 @@ var BASE=[
     {k:'net',l:'Network',f:function(m){return m.net||'\u2014';}}
   ];
   function yn(b){ if(b==null) return '\u2014'; return b?'<span class="yes">Yes</span>':'<span class="no">No</span>'; }
+  function selIds(){ return Object.keys(SEL).filter(function(k){return SEL[k];}); }
   function renderPick(){
-    var ms=all(), h='';
-    ms.forEach(function(m){
-      h+='<label><input type="checkbox" data-id="'+esc(m.id)+'"'+(SEL[m.id]?' checked':'')+'> '+esc(nm(m))+(m.custom?' <button class="del" type="button" data-del="'+esc(m.id)+'" aria-label="Remove '+esc(nm(m))+'" title="Remove">&times;</button>':'')+'</label>';
+    var ms=all(), groups={}, order=[];
+    ms.forEach(function(m){ if(SEL[m.id]) return; var g=m.custom?'My machines':m.brand; if(!groups[g]){groups[g]=[];order.push(g);} groups[g].push(m); });
+    var h='<select id="addsel" aria-label="Add a machine to compare"><option value="">Choose a machine to add\u2026</option>';
+    order.forEach(function(g){ h+='<optgroup label="'+esc(g)+'">'+groups[g].map(function(m){return '<option value="'+esc(m.id)+'">'+esc(nm(m))+'</option>';}).join('')+'</optgroup>'; });
+    h+='</select><div class="chips">';
+    ms.filter(function(m){return SEL[m.id];}).forEach(function(m){
+      h+='<span class="chip">'+esc(nm(m))+' <button type="button" data-rm="'+esc(m.id)+'" aria-label="Remove '+esc(nm(m))+' from comparison">&times;</button>'+(m.custom?' <button class="del" type="button" data-del="'+esc(m.id)+'" aria-label="Delete '+esc(nm(m))+'" title="Delete saved machine">\ud83d\uddd1</button>':'')+'</span>';
     });
-    $('pick').innerHTML=h;
+    $('pick').innerHTML=h+'</div>';
   }
   function renderTable(){
     var ms=all().filter(function(m){return SEL[m.id];}), out=$('out');
-    if(!ms.length){ out.innerHTML='<section class="card"><div class="hint">Tick a machine above to see its specs.</div></section>'; return; }
+    if(!ms.length){ out.innerHTML='<section class="card"><div class="hint">Choose a machine above to see its specs.</div></section>'; return; }
     var h='<div class="tw"><table><thead><tr><th class="rl">Spec</th>'+ms.map(function(m){return '<th>'+esc(nm(m))+'</th>';}).join('')+'</tr></thead><tbody>';
     ROWS.forEach(function(r){
       var best=null;
@@ -213,16 +222,15 @@ var BASE=[
   }
   function render(){ renderPick(); renderTable(); }
   $('pick').addEventListener('change',function(e){
-    var cb=e.target; if(!cb.getAttribute||!cb.getAttribute('data-id')) return;
-    var id=cb.getAttribute('data-id');
-    if(cb.checked){ if(Object.keys(SEL).filter(function(k){return SEL[k];}).length>=4){ cb.checked=false; $('pickmsg').textContent='Up to 4 machines at a time. Untick one first.'; return; } SEL[id]=1; }
-    else delete SEL[id];
-    $('pickmsg').textContent='Tick up to 4 machines.'; renderTable();
+    if(e.target.id!=='addsel'||!e.target.value) return;
+    if(selIds().length>=4){ $('pickmsg').textContent='Up to 4 machines at a time. Remove one first.'; e.target.value=''; return; }
+    SEL[e.target.value]=1; $('pickmsg').textContent='Pick up to 4 machines.'; render();
   });
   $('pick').addEventListener('click',function(e){
-    var b=e.target.closest&&e.target.closest('button[data-del]'); if(!b) return;
-    e.preventDefault(); var id=b.getAttribute('data-del');
-    CUSTOM=CUSTOM.filter(function(m){return m.id!==id;}); delete SEL[id]; save(); render();
+    var t=e.target.closest&&e.target.closest('button'); if(!t) return;
+    var rm=t.getAttribute('data-rm'), dl=t.getAttribute('data-del');
+    if(rm){ delete SEL[rm]; $('pickmsg').textContent='Pick up to 4 machines.'; render(); }
+    else if(dl){ CUSTOM=CUSTOM.filter(function(m){return m.id!==dl;}); delete SEL[dl]; save(); render(); }
   });
   function nv(id){ var v=$(id).value.trim(); return v===''?null:+v; }
   $('addbtn').addEventListener('click',function(){

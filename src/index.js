@@ -82,6 +82,13 @@ export default {
         rec.name = name;
         rec.updated = Date.now();
         if (typeof body.notes === 'string') rec.notes = body.notes.slice(0, 4000);
+        if (body.contact && typeof body.contact === 'object') {
+          const c = {};
+          for (const f of ['person', 'phone', 'email', 'address']) {
+            if (typeof body.contact[f] === 'string' && body.contact[f].trim()) c[f] = body.contact[f].trim().slice(0, f === 'address' ? 300 : 120);
+          }
+          rec.contact = c;
+        }
         if (body.pnote && Number.isInteger(body.pnote.key) && body.pnote.key >= 0 && body.pnote.key < 100000 && typeof body.pnote.text === 'string') {
           rec.pnotes = rec.pnotes || {};
           const t = body.pnote.text.trim().slice(0, 500);

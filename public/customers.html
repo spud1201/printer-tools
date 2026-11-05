@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Customers</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column. Quote details, add-a-printer search, one card per printer line with its toner and drum, totals, then plain-text quote to copy. */
+:root{
+  --bg:#F2F4F8; --surface:#FFFFFF; --ink:#121927; --muted:#566275; --line:#D8DEE8; --track:#E4E9F1;
+  --a:#2A59D6; --a-ink:#2A59D6; --on-a:#FFFFFF; --warn-bg:#FFF1DD; --warn-ink:#8A4B00; --ok-ink:#17703A; --danger:#B3261E;
+  --font-display:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-data:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D121B; --surface:#151C28; --ink:#E9EDF4; --muted:#9AA6B8; --line:#263142; --track:#222C3B;
+    --a:#6F98FF; --a-ink:#8CAEFF; --on-a:#0D121B; --warn-bg:#3A2A10; --warn-ink:#F5C57A; --ok-ink:#6FD39A; --danger:#FF8A80; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D121B; --surface:#151C28; --ink:#E9EDF4; --muted:#9AA6B8; --line:#263142; --track:#222C3B;
+  --a:#6F98FF; --a-ink:#8CAEFF; --on-a:#0D121B; --warn-bg:#3A2A10; --warn-ink:#F5C57A; --ok-ink:#6FD39A; --danger:#FF8A80; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-display);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;
+  padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:46rem;margin:0 auto;display:grid;gap:14px}
+h1{margin:0;font-size:1.5rem;line-height:1.1;font-weight:800;font-stretch:112%;letter-spacing:-.01em}
+h2{margin:0;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sub{margin:.35rem 0 0;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:12px;min-width:0}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.full{grid-column:1/-1}
+label{display:grid;gap:4px;font-size:.8rem;color:var(--muted);font-weight:600;min-width:0}
+input,select,textarea,button{font:inherit;color:inherit}
+input[type=text],input[type=number],input[type=search],input[type=date],select,textarea{width:100%;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;color:var(--ink);font-size:16px}
+input.num{font-family:var(--font-data);text-align:right}
+textarea{resize:vertical;font-family:var(--font-data);font-size:.82rem;line-height:1.5;min-height:15rem}
+:focus-visible{outline:2px solid var(--a);outline-offset:2px}
+button{cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 12px;font-weight:600;font-size:.9rem}
+button.primary{background:var(--a);color:var(--on-a);border-color:var(--a)}
+button.link{border:0;background:none;padding:4px 0;color:var(--a-ink);font-size:.85rem}
+button.del{border:0;background:none;color:var(--muted);padding:4px 8px;font-size:1.2rem;line-height:1}
+.add{display:grid;gap:8px;grid-template-columns:minmax(0,1fr) auto}
+.line{display:grid;gap:10px}
+.line-head{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.line-head h3{margin:0;font-size:1.05rem;line-height:1.2;font-weight:700;min-width:0;overflow-wrap:anywhere}
+.type{color:var(--muted);font-size:.85rem}
+.tag{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:6px;padding:2px 6px;background:var(--warn-bg);color:var(--warn-ink);margin-left:6px;vertical-align:middle}
+.sec{border-top:1px solid var(--line);padding-top:10px;display:grid;gap:8px}
+.sec-t{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.row{display:grid;gap:8px;grid-template-columns:minmax(0,1fr) 4.2rem 6.6rem;align-items:end}
+.row.has-part{grid-template-columns:minmax(0,1fr) 4.2rem 6.6rem}
+.tot{display:flex;justify-content:space-between;gap:10px;font-family:var(--font-data);font-size:.9rem}
+.tot b{font-weight:500}
+.line-total{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:10px;font-weight:700}
+.mono{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+.sum{display:grid;gap:8px}
+.sum .big{font-size:1.4rem;font-weight:800}
+.hint{font-size:.8rem;color:var(--muted)}
+.need{color:var(--warn-ink);font-size:.78rem;font-weight:600}
+details summary{cursor:pointer;color:var(--a-ink);font-size:.82rem;font-weight:600}
+details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:var(--muted);overflow-wrap:anywhere}
+.empty{text-align:center;color:var(--muted);padding:22px 8px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:30rem){.grid{grid-template-columns:minmax(0,1fr)}.row{grid-template-columns:minmax(0,1fr) 4rem 6rem}}
+
+.printdoc{display:none}
+.logobox{display:grid;gap:8px}
+.logobox .lt{font-size:.8rem;color:var(--muted);font-weight:600}
+.lrow{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.lprev{min-width:0;max-width:14rem;min-height:3.5rem;display:flex;align-items:center;background:#fff;border:1px dashed var(--line);border-radius:8px;padding:6px 10px}
+.lprev img{max-width:100%;max-height:4.5rem;display:block}
+.lbtns{display:flex;gap:8px;flex-wrap:wrap}
+.srow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;border-top:1px solid var(--line);padding:6px 0;font-size:.9rem}
+.skey{overflow-wrap:anywhere}
+@media print{
+  :root{--bg:#fff;--surface:#fff;--ink:#000;--muted:#444;--line:#999}
+  body{background:#fff;color:#000;padding:0;font-size:11pt}
+  .wrap{display:none!important}
+  #savedcard{display:none!important}
+  .printdoc{display:block!important}
+  .pd h1{font-size:20pt;margin:0 0 4pt}
+  .pd img.logo{display:block;max-height:22mm;max-width:60mm;margin:0 0 8pt}
+  .pd .co{white-space:pre-line;margin:0 0 10pt;font-size:10pt}
+  .pd .meta{display:grid;grid-template-columns:1fr 1fr;gap:2pt 16pt;margin:0 0 12pt;font-size:10pt}
+  .pd table{width:100%;border-collapse:collapse;font-size:10pt}
+  .pd th{text-align:left;border-bottom:1.5pt solid #000;padding:4pt 3pt;font-size:9pt;text-transform:uppercase;letter-spacing:.04em}
+  .pd td{padding:3pt;border-bottom:.5pt solid #bbb;vertical-align:top}
+  .pd td.n,.pd th.n{text-align:right;white-space:nowrap}
+  .pd tr.pr td{font-weight:700;border-top:1pt solid #666;padding-top:7pt}
+  .pd tr.sub td:first-child{padding-left:14pt}
+  .pd tr{break-inside:avoid}
+  .pd .totals{margin:10pt 0 0 auto;width:55%;font-size:11pt}
+  .pd .totals div{display:flex;justify-content:space-between;padding:2pt 0}
+  .pd .totals .gt{font-weight:700;border-top:1.5pt solid #000;margin-top:3pt;padding-top:4pt;font-size:13pt}
+  .pd .fine{margin-top:14pt;font-size:8.5pt;color:#444}
+  @page{margin:14mm}
+}
+.on{color:var(--ok-ink);font-weight:700;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase}
+.sup{display:grid;grid-template-columns:3.6rem minmax(0,1fr) auto;gap:4px 10px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line);font-size:.92rem}
+.sup:first-of-type{border-top:0}
+.sup .k{color:var(--muted);font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.pnote{display:grid;gap:4px;margin-top:2px;font-size:.8rem}
+.pnprint{display:none}
+@media print{.pnprint{display:block;font-size:10pt;margin-top:4px}}
+.sup .pn{font-family:var(--font-data);font-weight:500;overflow-wrap:anywhere}
+.sup .pr{font-family:var(--font-data);text-align:right;white-space:nowrap}
+.sup .yl{grid-column:2/-1;color:var(--muted);font-size:.82rem}
+@media print{.notesprint:not([hidden]){display:block!important;white-space:pre-wrap;border-top:1px solid #999;padding-top:8px;margin-top:10px}body{background:#fff}.noprint{display:none!important}}
+.add{grid-template-columns:minmax(0,1fr) auto auto!important}
+.arrow{min-width:44px;padding:9px 0;font-size:1rem;line-height:1}
+.sugg{max-height:15rem;overflow-y:auto;overscroll-behavior:contain;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.sugg button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:12px;min-height:44px;font-weight:500;overflow-wrap:anywhere}
+.sugg button:last-child{border-bottom:0}
+.sugg .none{padding:12px;color:var(--muted);font-size:.9rem}
+
+.nav{display:flex;gap:12px;font-size:.85rem}
+a.back{color:var(--a-ink);font-size:.85rem;text-decoration:none}
+.cust{display:grid;gap:8px}
+.cust h3{margin:0;font-size:1.05rem;line-height:1.2;font-weight:700;overflow-wrap:anywhere}
+.cust .ln{font-size:.88rem;color:var(--muted);overflow-wrap:anywhere}
+.cust .ln a{color:var(--a-ink)}
+.cust .nt{font-size:.85rem;white-space:pre-wrap;overflow-wrap:anywhere;max-height:5.5rem;overflow:hidden}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btns button,.btns a{font-size:.82rem;padding:7px 10px}
+a.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;font-weight:600;text-decoration:none;color:var(--ink)}
+button.dng{color:var(--danger)}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tags .tag{margin-left:0;background:var(--track);color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <a class="back" href="index.html">&larr; All tools</a>
+    <h1 style="margin-top:6px">Customers</h1>
+    <p class="sub">Your saved customers. A customer saved from a quote shows up here too.</p>
+  </div>
+  <section class="card" id="formcard" aria-label="Customer details">
+    <h2 id="ftitle">Add a customer</h2>
+    <div class="grid">
+      <label class="full">Company or customer name<input type="text" id="f_name" maxlength="80" autocomplete="off"></label>
+      <label>Contact person<input type="text" id="f_person" maxlength="120" autocomplete="off"></label>
+      <label>Phone<input type="text" id="f_phone" maxlength="120" inputmode="tel" autocomplete="off"></label>
+      <label class="full">Email<input type="text" id="f_email" maxlength="120" inputmode="email" autocomplete="off"></label>
+      <label class="full">Address<input type="text" id="f_addr" maxlength="300" autocomplete="off"></label>
+      <label class="full">Notes<textarea id="f_notes" maxlength="4000" style="min-height:5rem;font-family:var(--font-display);font-size:1rem" placeholder="Delivery, contract, anything to remember"></textarea></label>
+    </div>
+    <div class="actions"><button class="primary" id="fsave" type="button">Save customer</button><button id="fcancel" type="button" hidden>Cancel edit</button></div>
+    <div class="hint" id="fmsg" role="status">Saved to your login, so only you see your customers.</div>
+  </section>
+  <section class="card" aria-label="Customer list">
+    <label>Search customers<input type="search" id="q" placeholder="Name, contact, phone or email" autocomplete="off"></label>
+    <div class="hint" id="count"></div>
+  </section>
+  <div id="list" class="wrap" style="gap:12px"></div>
+</div>
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  var CL={}, EDIT='', LOADED=false;
+  function api(method,path,body){ return fetch('/api/clients'+(path||''),{method:method,headers:{'content-type':'application/json',accept:'application/json'},body:body?JSON.stringify(body):undefined}).then(function(r){ if(!r.ok) throw 0; return r.json(); }); }
+  function msg(t){ $('fmsg').textContent=t; }
+  function newId(){ return 'c'+Date.now().toString(36)+Math.floor(Math.random()*1296).toString(36); }
+  function plines(c){ var n=0; ['quote','margin'].forEach(function(t){ if(c[t]&&c[t].lines) n=Math.max(n,c[t].lines.length); }); return n; }
+  function render(){
+    var q=$('q').value.trim().toLowerCase();
+    var ids=Object.keys(CL).sort(function(a,b){ return CL[a].name.toLowerCase()<CL[b].name.toLowerCase()?-1:1; });
+    var shown=ids.filter(function(id){ var c=CL[id], ct=c.contact||{}; if(!q) return true; return [c.name,ct.person,ct.phone,ct.email,ct.address,c.notes].join(' ').toLowerCase().indexOf(q)>=0; });
+    $('count').textContent=!LOADED?'Loading...':(ids.length+' customer'+(ids.length===1?'':'s')+(q?' · '+shown.length+' match':''));
+    if(!shown.length){ $('list').innerHTML='<div class="card empty">'+(LOADED?(ids.length?'No customers match that search.':'No customers yet. Add one above, or save a quote to a client.'):'Loading...')+'</div>'; return; }
+    $('list').innerHTML=shown.map(function(id){
+      var c=CL[id], ct=c.contact||{}, h='<article class="card cust" data-id="'+esc(id)+'"><h3>'+esc(c.name)+'</h3>';
+      if(ct.person) h+='<div class="ln">'+esc(ct.person)+'</div>';
+      if(ct.phone) h+='<div class="ln"><a href="tel:'+esc(ct.phone.replace(/[^0-9+]/g,''))+'">'+esc(ct.phone)+'</a></div>';
+      if(ct.email) h+='<div class="ln"><a href="mailto:'+esc(ct.email)+'">'+esc(ct.email)+'</a></div>';
+      if(ct.address) h+='<div class="ln">'+esc(ct.address)+'</div>';
+      if(c.notes) h+='<div class="nt">'+esc(c.notes)+'</div>';
+      var tg=''; if(c.quote) tg+='<span class="tag">Quote saved</span>'; if(c.margin) tg+='<span class="tag">Margin quote saved</span>';
+      var n=plines(c); if(n) tg+='<span class="tag">'+n+' printer'+(n===1?'':'s')+'</span>';
+      if(tg) h+='<div class="tags">'+tg+'</div>';
+      h+='<div class="btns"><button type="button" data-a="edit">Edit</button><button type="button" data-a="quote">Open quote</button><button type="button" data-a="margin">Open margin quote</button><a class="btn" href="supplies.html">Supplies</a><button type="button" class="dng" data-a="del">Delete</button></div></article>';
+      return h;
+    }).join('');
+  }
+  function fillForm(id){
+    EDIT=id||''; var c=id?CL[id]:null, ct=(c&&c.contact)||{};
+    $('f_name').value=c?c.name:''; $('f_person').value=ct.person||''; $('f_phone').value=ct.phone||''; $('f_email').value=ct.email||''; $('f_addr').value=ct.address||''; $('f_notes').value=(c&&c.notes)||'';
+    $('ftitle').textContent=c?'Edit customer':'Add a customer'; $('fcancel').hidden=!c; $('fsave').textContent=c?'Save changes':'Save customer';
+  }
+  $('fsave').addEventListener('click',function(){
+    var name=$('f_name').value.trim(); if(!name){ msg('Enter the customer name.'); return; }
+    var id=EDIT;
+    if(!id) Object.keys(CL).forEach(function(k){ if(CL[k].name.toLowerCase()===name.toLowerCase()) id=k; });
+    var isNew=!id; if(!id) id=newId();
+    var contact={person:$('f_person').value,phone:$('f_phone').value,email:$('f_email').value,address:$('f_addr').value}, notes=$('f_notes').value;
+    msg('Saving...');
+    api('PUT','',{id:id,name:name,notes:notes,contact:contact}).then(function(){
+      var rec=CL[id]||{}; rec.name=name; rec.notes=notes; rec.contact={}; Object.keys(contact).forEach(function(k){ if(contact[k].trim()) rec.contact[k]=contact[k].trim(); }); CL[id]=rec;
+      msg((isNew?'Customer saved: ':'Updated ')+name+'.'); fillForm(''); render();
+    }).catch(function(){ msg('Could not save. Check your connection and try again.'); });
+  });
+  $('fcancel').addEventListener('click',function(){ fillForm(''); msg('Edit cancelled.'); });
+  $('q').addEventListener('input',render);
+  $('list').addEventListener('click',function(e){
+    var b=e.target.closest('button[data-a]'); if(!b) return;
+    var id=b.closest('[data-id]').getAttribute('data-id'), a=b.getAttribute('data-a'), c=CL[id];
+    if(a==='edit'){ fillForm(id); msg('Editing '+c.name+'.'); window.scrollTo({top:0,behavior:'smooth'}); }
+    else if(a==='quote'||a==='margin'){ try{ localStorage.setItem('printer-client-'+a,id); localStorage.setItem('printer-client-open',a+':'+id); }catch(x){} location.href=(a==='quote'?'quote.html':'quote-margin.html'); }
+    else if(a==='del'){
+      if(!confirm('Delete '+c.name+' and any quotes saved to them?')) return;
+      api('DELETE','?id='+encodeURIComponent(id)).then(function(){ delete CL[id]; if(EDIT===id) fillForm(''); render(); msg(c.name+' deleted.'); }).catch(function(){ msg('Could not delete. Try again.'); });
+    }
+  });
+  render();
+  api('GET').then(function(j){ CL=j.clients||{}; LOADED=true; render(); }).catch(function(){ LOADED=true; $('count').textContent='Could not load customers. Reload the page.'; });
+})();
+</script>
+</body>
+</html>

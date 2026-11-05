@@ -572,6 +572,10 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
     clApi('GET').then(function(j){
       CL=j.clients||{}; try{ CUR=localStorage.getItem(clKey())||''; }catch(e){}
       $('clientcard').hidden=false; clRender();
+      try{
+        var op=localStorage.getItem('printer-client-open')||''; localStorage.removeItem('printer-client-open');
+        var pr=op.split(':'); if(pr[0]===TOOL&&CL[pr[1]]){ $('clsel').value=pr[1]; $('clsel').dispatchEvent(new Event('change')); }
+      }catch(e){}
     }).catch(function(){});
     $('clsel').addEventListener('change',function(){
       if(this.value==='__new'){

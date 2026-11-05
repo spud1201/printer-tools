@@ -1,5 +1,9 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Print Speed Compare</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: one column. Printer pickers on top, a plain-language verdict, then evidence cards
@@ -89,7 +93,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .chip{min-height:44px; padding:0 .85rem; border:1px solid var(--line); background:transparent; color:var(--ink); border-radius:22px; cursor:pointer; font-family:var(--font-data); font-size:.9rem}
 .chip[aria-pressed="true"]{background:var(--ink); color:var(--on-ink); border-color:var(--ink)}
 
-.tablewrap{overflow-x:auto}
+.wrap>*{min-width:0}
+.tablewrap{overflow-x:auto; max-width:100%; position:relative}
 table{width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; min-width:26rem}
 th,td{padding:.6rem .5rem; border-top:1px solid var(--line); text-align:right; vertical-align:middle}
 thead th{border-top:0; font-size:.78rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em}
@@ -123,8 +128,10 @@ td:last-child,th:last-child{width:48px; padding-right:0}
   .verdict h2{font-size:1.5rem}
 }
 @media (prefers-reduced-motion:reduce){.strip i{transition:none}.go:active{transform:none}}
+[hidden]{display:none!important}
 </style>
-
+</head>
+<body>
 <main class="wrap">
   <header>
     <h1>Print Speed Compare</h1>
@@ -793,3 +800,5 @@ td:last-child,th:last-child{width:48px; padding-right:0}
   render();
 })();
 </script>
+</body>
+</html>

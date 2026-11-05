@@ -117,7 +117,38 @@ button.del{border:0;background:none;color:var(--muted);padding:0 4px;font-size:1
 </div>
 <script>
 var BASE=[
-  {id:'hp-oj-pro-8710',brand:'HP',model:'OfficeJet Pro 8710',tech:'Inkjet',bw:22,col:18,res:'1200 \u00d7 1200',dp:true,ds:true,feed:50,paper:250,duty:25000,v1:250,v2:1500,touch:2.65,net:'Wi-Fi, Ethernet'}
+  {id:'hp-oj-pro-8710',brand:'HP',model:'OfficeJet Pro 8710',tech:'Inkjet',bw:22,col:18,res:'1200 \u00d7 1200',dp:true,ds:true,feed:50,paper:250,duty:25000,v1:250,v2:1500,touch:2.65,net:'Wi-Fi, Ethernet'},
+  {id:'brother-mfcl8930cdw',brand:'Brother',model:'MFC-L8930CDW',tech:'Laser',bw:33,col:33,res:'2400 × 600',dp:true,ds:true,feed:80,paper:250,duty:null,v1:null,v2:null,touch:7,net:'Gigabit Ethernet, Wi-Fi (dual-band)'},
+  {id:'brother-mfcl8905cdw',brand:'Brother',model:'MFC-L8905CDW',tech:'Laser',bw:33,col:33,res:'2400 × 600',dp:true,ds:true,feed:70,paper:250,duty:60000,v1:0,v2:4000,touch:7,net:'Ethernet, Wi-Fi'},
+  {id:'brother-mfcl8970cdw',brand:'Brother',model:'MFC-L8970CDW',tech:'Laser',bw:33,col:33,res:'2400 × 600',dp:true,ds:true,feed:80,paper:250,duty:80000,v1:null,v2:null,touch:7,net:'Ethernet, Wi-Fi, NFC'},
+  {id:'brother-mfcl8730cdw',brand:'Brother',model:'MFC-L8730CDW',tech:'Laser',bw:33,col:33,res:'2400 × 600',dp:true,ds:true,feed:80,paper:250,duty:60000,v1:0,v2:5000,touch:3.5,net:'Gigabit Ethernet, Wi-Fi (dual-band)'},
+  {id:'brother-mfcl9610cdn',brand:'Brother',model:'MFC-L9610CDN',tech:'Laser',bw:42,col:42,res:'2400 × 600',dp:true,ds:true,feed:100,paper:520,duty:150000,v1:2000,v2:null,touch:7,net:'Gigabit Ethernet (Wi-Fi optional)'},
+  {id:'brother-mfcl9670cdn',brand:'Brother',model:'MFC-L9670CDN',tech:'Laser',bw:42,col:42,res:'2400 × 600',dp:true,ds:true,feed:100,paper:520,duty:150000,v1:2000,v2:null,touch:7,net:'Ethernet, Wi-Fi'},
+  {id:'brother-mfcl3780cdw',brand:'Brother',model:'MFC-L3780CDW',tech:'LED',bw:31,col:31,res:'2400 × 600',dp:true,ds:true,feed:50,paper:250,duty:50000,v1:0,v2:4000,touch:3.5,net:'Gigabit Ethernet, Wi-Fi (dual-band)'},
+  {id:'brother-mfcl3720cdw',brand:'Brother',model:'MFC-L3720CDW',tech:'LED',bw:19,col:19,res:'2400 × 600',dp:true,ds:false,feed:50,paper:250,duty:40000,v1:0,v2:3000,touch:3.5,net:'Wi-Fi (dual-band)'},
+  {id:'brother-hll3300cdw',brand:'Brother',model:'HL-L3300CDW',tech:'LED',bw:19,col:19,res:'2400 × 600',dp:true,ds:null,feed:null,paper:250,duty:40000,v1:0,v2:3000,touch:null,net:'Wi-Fi (dual-band)'},
+  {id:'brother-mfcl2820dw',brand:'Brother',model:'MFC-L2820DW',tech:'Laser',bw:34,col:null,res:'1200 × 1200',dp:true,ds:false,feed:50,paper:250,duty:35000,v1:0,v2:2500,touch:2.7,net:'Ethernet, Wi-Fi (dual-band)'},
+  {id:'brother-mfcl2900dw',brand:'Brother',model:'MFC-L2900DW',tech:'Laser',bw:36,col:null,res:'1200 × 1200',dp:true,ds:true,feed:50,paper:250,duty:35000,v1:0,v2:2500,touch:3.5,net:'Gigabit Ethernet, Wi-Fi'},
+  {id:'brother-mfcl2807dw',brand:'Brother',model:'MFC-L2807DW',tech:'Laser',bw:34,col:null,res:'1200 × 1200',dp:true,ds:false,feed:50,paper:250,duty:35000,v1:0,v2:2500,touch:2.7,net:'Gigabit Ethernet, Wi-Fi (dual-band)'},
+  {id:'brother-dcpl2640dw',brand:'Brother',model:'DCP-L2640DW',tech:'Laser',bw:36,col:null,res:'1200 × 1200',dp:true,ds:false,feed:50,paper:250,duty:35000,v1:0,v2:2500,touch:null,net:'Ethernet, Wi-Fi (dual-band)'},
+  {id:'brother-mfcl5710dw',brand:'Brother',model:'MFC-L5710DW',tech:'Laser',bw:48,col:null,res:'1200 × 1200',dp:true,ds:true,feed:50,paper:250,duty:90000,v1:0,v2:5000,touch:3.5,net:'Gigabit Ethernet, Wi-Fi'},
+  {id:'brother-mfcl5915dw',brand:'Brother',model:'MFC-L5915DW',tech:'Laser',bw:50,col:null,res:'1200 × 1200',dp:true,ds:true,feed:70,paper:250,duty:125000,v1:0,v2:8000,touch:5,net:'Gigabit Ethernet, Wi-Fi (dual-band)'},
+  {id:'brother-mfcl6810dw',brand:'Brother',model:'MFC-L6810DW',tech:'Laser',bw:52,col:null,res:'1200 × 1200',dp:true,ds:true,feed:80,paper:520,duty:140000,v1:0,v2:12000,touch:7,net:'Gigabit Ethernet, Wi-Fi (dual-band)'},
+  {id:'brother-hll2460dw',brand:'Brother',model:'HL-L2460DW',tech:'Laser',bw:36,col:null,res:'1200 × 1200',dp:true,ds:null,feed:null,paper:250,duty:35000,v1:0,v2:2500,touch:null,net:'Ethernet, Wi-Fi (dual-band)'},
+  {id:'brother-hll2480dw',brand:'Brother',model:'HL-L2480DW',tech:'Laser',bw:36,col:null,res:'1200 × 1200',dp:true,ds:null,feed:null,paper:250,duty:35000,v1:0,v2:2500,touch:null,net:'Ethernet, Wi-Fi'},
+  {id:'brother-hll2405w',brand:'Brother',model:'HL-L2405W',tech:'Laser',bw:30,col:null,res:'1200 × 1200',dp:false,ds:null,feed:null,paper:250,duty:35000,v1:0,v2:2500,touch:null,net:'Wi-Fi (dual-band)'},
+  {id:'brother-hll2420dw',brand:'Brother',model:'HL-L2420DW',tech:'Laser',bw:30,col:null,res:'1200 × 1200',dp:true,ds:null,feed:null,paper:250,duty:35000,v1:0,v2:2500,touch:null,net:'Wi-Fi (dual-band)'},
+  {id:'brother-hll5000d',brand:'Brother',model:'HL-L5000D',tech:'Laser',bw:42,col:null,res:'1200 × 1200',dp:true,ds:null,feed:null,paper:250,duty:50000,v1:0,v2:3500,touch:null,net:'USB, parallel (no network)'},
+  {id:'brother-hll5210dw',brand:'Brother',model:'HL-L5210DW',tech:'Laser',bw:48,col:null,res:'1200 × 1200',dp:true,ds:null,feed:null,paper:250,duty:90000,v1:null,v2:null,touch:null,net:'Ethernet, Wi-Fi'},
+  {id:'brother-hll6210dw',brand:'Brother',model:'HL-L6210DW',tech:'Laser',bw:50,col:null,res:'1200 × 1200',dp:true,ds:null,feed:null,paper:520,duty:125000,v1:0,v2:8000,touch:null,net:'Gigabit Ethernet, Wi-Fi'},
+  {id:'brother-hll6310dw',brand:'Brother',model:'HL-L6310DW',tech:'Laser',bw:52,col:null,res:'1200 × 1200',dp:true,ds:null,feed:null,paper:520,duty:140000,v1:0,v2:12000,touch:null,net:'Gigabit Ethernet, Wi-Fi'},
+  {id:'brother-mfcj1800dw',brand:'Brother',model:'MFC-J1800DW',tech:'Inkjet',bw:17,col:16.5,res:null,dp:true,ds:false,feed:20,paper:150,duty:2500,v1:0,v2:1000,touch:2.7,net:'Wi-Fi'},
+  {id:'brother-mfcj4535dw',brand:'Brother',model:'MFC-J4535DW',tech:'Inkjet',bw:20,col:19,res:null,dp:true,ds:null,feed:20,paper:400,duty:null,v1:null,v2:null,touch:2.7,net:'Wi-Fi, Wi-Fi Direct'},
+  {id:'brother-mfcj4555dw',brand:'Brother',model:'MFC-J4555DW',tech:'Inkjet',bw:20,col:19,res:'1200 × 2400',dp:true,ds:false,feed:20,paper:400,duty:30000,v1:250,v2:2000,touch:2.7,net:'Ethernet, Wi-Fi'},
+  {id:'brother-mfcj1360dw',brand:'Brother',model:'MFC-J1360DW',tech:'Inkjet',bw:16,col:9,res:'1200 × 6000',dp:true,ds:false,feed:20,paper:150,duty:null,v1:0,v2:1000,touch:null,net:'Wi-Fi'},
+  {id:'brother-mfcj1410dw',brand:'Brother',model:'MFC-J1410DW',tech:'Inkjet',bw:16,col:9,res:null,dp:true,ds:false,feed:20,paper:150,duty:2500,v1:0,v2:1000,touch:2.7,net:'Wi-Fi'},
+  {id:'brother-mfcj5010dw',brand:'Brother',model:'MFC-J5010DW',tech:'Inkjet',bw:28,col:26,res:null,dp:true,ds:false,feed:50,paper:250,duty:35000,v1:0,v2:2500,touch:2.7,net:'Gigabit Ethernet, Wi-Fi (dual-band)'},
+  {id:'brother-mfcj6560dw',brand:'Brother',model:'MFC-J6560DW',tech:'Inkjet',bw:31,col:30,res:'1200 × 2400',dp:true,ds:false,feed:50,paper:250,duty:35000,v1:0,v2:2500,touch:2.7,net:'Ethernet, Wi-Fi (dual-band)'}
 ];
 (function(){
   var $=function(id){return document.getElementById(id);};
@@ -143,7 +174,7 @@ var BASE=[
     {k:'touch',l:'Touchscreen',f:function(m){return m.touch?m.touch+' inches':'None';},v:function(m){return m.touch||0;},hi:1},
     {k:'net',l:'Network',f:function(m){return m.net||'\u2014';}}
   ];
-  function yn(b){ return b?'<span class="yes">Yes</span>':'<span class="no">No</span>'; }
+  function yn(b){ if(b==null) return '\u2014'; return b?'<span class="yes">Yes</span>':'<span class="no">No</span>'; }
   function renderPick(){
     var ms=all(), h='';
     ms.forEach(function(m){

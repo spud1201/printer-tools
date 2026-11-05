@@ -385,8 +385,9 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
     if(sp.opt===-1||!list[sp.opt]) return sp.part||'(part number needed)';
     var x=list[sp.opt]; return (x.ph?'Compatible ':'')+x.t+(x.y?' ('+x.y.toLocaleString('en-US')+' pages)':'')+(x.ph&&!x.real&&+sp.price===x.p?' [placeholder price]':'');
   }
-  function optHtml(list,sp,none){
+  function optHtml(list,sp,none,same){
     var h='';
+    if(same) h+='<option value="-3">Same as above</option>';
     if(none) h+='<option value="-2"'+(sp.opt===-2?' selected':'')+'>None</option>';
     list.forEach(function(x,i){ h+='<option value="'+i+'"'+(sp.opt===i?' selected':'')+'>'+(x.ph?'Compatible: ':'')+esc(x.t)+(x.y?' · '+x.y.toLocaleString('en-US')+' pg':'')+(x.p!=null?' · '+money(x.p):'')+(x.ph?(x.real?' (InkHouse price)':' (placeholder)'):'')+'</option>'; });
     h+='<option value="-1"'+(sp.opt===-1?' selected':'')+'>Other part number</option>';
@@ -396,7 +397,7 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
   function supHtml(l,kind,label,list,sp,idx){
     var none=true;
     var h='<div class="sec" data-kind="'+kind+'" data-idx="'+idx+'"><div class="sec-t">'+label+(kind==='toner'&&l.toners.length>1?' <button class="del" type="button" data-act="delt" aria-label="Remove this toner">×</button>':'')+'</div>';
-    h+='<label>Part<select data-f="opt" aria-label="'+label+' part">'+optHtml(list,sp,none)+'</select></label>';
+    h+='<label>Part<select data-f="opt" aria-label="'+label+' part">'+optHtml(list,sp,none,kind==='toner'&&idx>0)+'</select></label>';
     if(sp.opt===-1) h+='<label>Part number or description<input type="text" data-f="part" value="'+esc(sp.part)+'" placeholder="Enter part number"></label><label>Page yield (optional, for cost per page)<input class="num" type="number" min="0" step="1" data-f="yield" value="'+esc(sp.yield==null?'':sp.yield)+'" placeholder="e.g. 3000"></label>';
     if(sp.opt!==-2){
       var cur=(sp.opt>=0)?list[sp.opt]:null, phOn=cur&&cur.ph&&!cur.real&&+sp.price===cur.p;
@@ -500,7 +501,8 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
     var el=e.target; if(el.tagName!=='SELECT') return;
     var l=findLine(el), sec=el.closest('[data-kind]'); if(!l||!sec) return;
     var kind=sec.getAttribute('data-kind'), sp=getSp(l,sec), p=DATA[l.key], list=kind==='toner'?p.c:p.d;
-    { sp.opt=+el.value; if(sp.opt>=0){ var sv2=savedFor(partKey(list,sp)); sp.price=sv2!=null?sv2:list[sp.opt].p; } else if(sp.opt===-1){ sp.price=null; } }
+    if(el.value==='-3'){ var pv=l.toners[+sec.getAttribute('data-idx')-1]; if(pv){ sp.opt=pv.opt; sp.part=pv.part; sp.price=pv.price; sp.qty=pv.qty; sp.yield=pv.yield; } }
+    else { sp.opt=+el.value; if(sp.opt>=0){ var sv2=savedFor(partKey(list,sp)); sp.price=sv2!=null?sv2:list[sp.opt].p; } else if(sp.opt===-1){ sp.price=null; } }
     save(); render();
   });
   $('lines').addEventListener('click',function(e){

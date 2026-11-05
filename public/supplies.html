@@ -120,6 +120,15 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
     <label>Saved client<select id="sel"><option value="">Loading...</option></select></label>
     <div class="hint" id="msg">Clients come from the quote tools. Save a quote to a client there first.</div>
   </section>
+  <section class="card noprint" id="addcard" aria-label="Add a printer" hidden>
+    <h2>Add a printer to this client</h2>
+    <div class="add">
+      <input id="pick" type="search" list="plist" autocomplete="off" placeholder="Type a brand or model, e.g. Brother HL-L2405W" aria-label="Printer">
+      <button id="addbtn" class="primary" type="button">Add</button>
+    </div>
+    <datalist id="plist"></datalist>
+    <div class="hint" id="addmsg"></div>
+  </section>
   <div id="out" class="wrap" style="gap:14px"></div>
   <section class="card noprint" id="copycard" aria-label="Copy list" hidden>
     <h2>Part list</h2>
@@ -135,6 +144,7 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
   var fmt=new Intl.NumberFormat('en-CA',{style:'currency',currency:'CAD'});
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function name(p){return p.m.indexOf(p.b)===0?p.m:p.b+' '+p.m;}
+  DATA.forEach(function(p,i){ p.i=i; p.n=name(p); });
   var CL={};
   // printers a client has on their saved quotes: model index -> total qty, plus the parts picked
   function printersFor(c){
@@ -153,13 +163,14 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
   function pickedSet(e,list,sec){return e.picked;}
   function render(){
     var id=$('sel').value, out=$('out'), c=CL[id];
+    $('addcard').hidden=!c;
     if(!c){ out.innerHTML=''; $('copycard').hidden=true; return; }
     var ps=printersFor(c), h='', t='Supplies for '+c.name+'\n';
     if(!ps.length){ out.innerHTML='<section class="card"><div class="hint">'+esc(c.name)+' has no printers saved yet. Add printers in a quote tool and press Save to client.</div></section>'; $('copycard').hidden=true; return; }
     h+='<section class="card"><h2>'+esc(c.name)+'</h2><div class="hint">'+ps.length+' printer model'+(ps.length>1?'s':'')+'. List prices in Canadian dollars. Eco fees not included.</div></section>';
     ps.forEach(function(e){
       var p=e.p; t+='\n'+name(p)+(e.qty>1?' x '+e.qty:'')+'\n';
-      h+='<section class="card"><div class="line-head"><h3>'+esc(name(p))+(e.qty>1?' <span class="type">x '+e.qty+'</span>':'')+'</h3></div><div class="type">'+esc(p.t||'')+'</div>';
+      h+='<section class="card"><div class="line-head"><h3>'+esc(name(p))+(e.qty>1?' <span class="type">x '+e.qty+'</span>':'')+'</h3><button class="del noprint" type="button" data-rm="'+p.i+'" aria-label="Remove '+esc(name(p))+' from this client" title="Remove from client">&times;</button></div><div class="type">'+esc(p.t||'')+'</div>';
       var any=false;
       [['Toner',p.c],['Drum',p.d]].forEach(function(g){
         g[1].forEach(function(x){
@@ -181,6 +192,37 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
     $('sel').innerHTML=h;
     try{ var last=localStorage.getItem('supplies-client'); if(last&&CL[last]){ $('sel').value=last; render(); } }catch(e){}
   }
+
+  var dl=''; DATA.forEach(function(p){ dl+='<option value="'+esc(p.n)+'"></option>'; }); $('plist').innerHTML=dl;
+  function today(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function cheapest(list){ var b=-1,bv=1e18; list.forEach(function(x,i){ if(!x.ph&&x.p&&x.y){ var v=x.p/x.y; if(v<bv){bv=v;b=i;} } }); return b; }
+  function makeSup(list){ var o=cheapest(list); if(o<0) o=list.length?0:-1; return {opt:o,part:'',price:(o>=0&&list[o].p!=null)?list[o].p:null,qty:1}; }
+  function put(id,tool){ var c=CL[id]; return fetch('/api/clients',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({id:id,name:c.name,tool:tool,state:c[tool]})}).then(function(r){ if(!r.ok) throw 0; }); }
+  function addMsg(t){ $('addmsg').textContent=t; }
+  var busy=false;
+  function doAdd(){
+    var id=$('sel').value, c=CL[id]; if(!c||busy) return;
+    var v=$('pick').value.trim().toLowerCase(), hit=null;
+    DATA.forEach(function(p){ if(p.n.toLowerCase()===v) hit=p; });
+    if(!hit){ var m=DATA.filter(function(p){ return p.n.toLowerCase().indexOf(v)>=0; }); if(v&&m.length===1) hit=m[0]; else if(v&&m.length>1){ addMsg(m.length+' models match. Keep typing or choose one from the list.'); return; } }
+    if(!hit){ addMsg('No model found. Check the spelling or choose from the list.'); return; }
+    var st=c.quote||(c.quote={cust:c.name,qno:'QT-'+today().replace(/-/g,'')+'-'+(Math.floor(Math.random()*900)+100),qdate:today(),qby:'',qco:'',tax:5,lines:[]});
+    var mx=0; st.lines.forEach(function(l){ mx=Math.max(mx,l.uid||0); });
+    st.lines.unshift({uid:mx+1,key:hit.i,qty:1,price:hit.p,toners:[makeSup(hit.c)],drum:(function(){ var d=makeSup(hit.d); if(!hit.d.length) d.opt=-2; return d; })(),extras:[]});
+    addMsg('Saving...'); busy=true; $('pick').value='';
+    put(id,'quote').then(function(){ busy=false; addMsg(hit.n+' added to '+c.name+'.'); render(); }).catch(function(){ busy=false; st.lines.shift(); $('pick').value=hit.n; addMsg('Could not save. Try again.'); });
+  }
+  $('addbtn').addEventListener('click',doAdd);
+  $('pick').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); doAdd(); } });
+  $('pick').addEventListener('change',function(){ var v=this.value.trim().toLowerCase(); if(DATA.some(function(p){return p.n.toLowerCase()===v;})) doAdd(); });
+  $('out').addEventListener('click',function(e){
+    var b=e.target.closest('button[data-rm]'); if(!b) return;
+    var id=$('sel').value, c=CL[id], k=+b.getAttribute('data-rm'); if(!c) return;
+    if(!confirm('Remove '+DATA[k].n+' from '+c.name+'? It is removed from their saved quotes.')) return;
+    var backup={quote:c.quote&&JSON.parse(JSON.stringify(c.quote)),margin:c.margin&&JSON.parse(JSON.stringify(c.margin))}, jobs=[];
+    ['quote','margin'].forEach(function(t){ if(c[t]&&c[t].lines){ c[t].lines=c[t].lines.filter(function(l){ return l.key!==k; }); jobs.push(put(id,t)); } });
+    Promise.all(jobs).then(function(){ addMsg(DATA[k].n+' removed.'); render(); }).catch(function(){ c.quote=backup.quote; c.margin=backup.margin; addMsg('Could not remove. Try again.'); render(); });
+  });
   $('sel').addEventListener('change',function(){ try{ localStorage.setItem('supplies-client',this.value); }catch(e){} render(); });
   $('print').addEventListener('click',function(){ window.print(); });
   $('copy').addEventListener('click',function(){

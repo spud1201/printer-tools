@@ -110,6 +110,15 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
     <p class="sub">Prices here are your costs. Set a margin or markup and the tool works out the selling price for the customer.</p>
   </div>
 
+  <section id="clientcard" class="card" aria-label="Client" hidden>
+    <h2>Client</h2>
+    <div class="grid">
+      <label class="full">Saved clients<select id="clsel"></select></label>
+    </div>
+    <div class="actions"><button id="clsave" class="primary" type="button">Save to client</button><button id="cldel" type="button" hidden>Delete client</button></div>
+    <div class="hint" id="clmsg">Saved to your login, so only you see your clients. Saving uses the Customer name below.</div>
+  </section>
+
   <section class="card" aria-label="Quote details">
     <h2>Quote details</h2>
     <div class="grid">
@@ -422,6 +431,49 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
     save(); render();
   });
   function fill(id,k){ $(id).value=S[k]||''; $(id).addEventListener('input',function(){ S[k]=this.value; save(); totals(); }); }
+  var TOOL='margin', CL={}, CUR='';
+  function clKey(){ return 'printer-client-'+TOOL; }
+  function clApi(method,path,body){ return fetch('/api/clients'+(path||''),{method:method,headers:{'content-type':'application/json',accept:'application/json'},body:body?JSON.stringify(body):undefined}).then(function(r){ if(!r.ok) throw 0; return r.json(); }); }
+  function clMsg(t){ $('clmsg').textContent=t; }
+  function clRender(){
+    var ids=Object.keys(CL).sort(function(a,b){ return CL[a].name.toLowerCase()<CL[b].name.toLowerCase()?-1:1; });
+    var h='<option value="">No client selected</option>';
+    ids.forEach(function(id){ h+='<option value="'+esc(id)+'"'+(id===CUR?' selected':'')+'>'+esc(CL[id].name)+(CL[id][TOOL]?'':' (no quote here yet)')+'</option>'; });
+    $('clsel').innerHTML=h; if(!CL[CUR]) CUR=''; $('clsel').value=CUR; $('cldel').hidden=!CUR;
+  }
+  function initClients(){
+    clApi('GET').then(function(j){
+      CL=j.clients||{}; try{ CUR=localStorage.getItem(clKey())||''; }catch(e){}
+      $('clientcard').hidden=false; clRender();
+    }).catch(function(){});
+    $('clsel').addEventListener('change',function(){
+      CUR=this.value; try{ localStorage.setItem(clKey(),CUR); }catch(e){}
+      $('cldel').hidden=!CUR; if(!CUR){ clMsg('No client selected. The quote below is not tied to a client.'); return; }
+      var c=CL[CUR];
+      if(c[TOOL]){ try{ localStorage.setItem(KEY,JSON.stringify(c[TOOL])); }catch(e){} location.reload(); return; }
+      S.cust=c.name; save(); $('cust').value=c.name; totals();
+      clMsg('No quote saved for '+c.name+' in this tool yet. Add printers, then press Save to client.');
+    });
+    $('clsave').addEventListener('click',function(){
+      var name=(S.cust||'').trim();
+      if(!name){ clMsg('Type a customer name in Quote details first.'); return; }
+      var id='';
+      if(CUR&&CL[CUR]&&CL[CUR].name===name) id=CUR;
+      else Object.keys(CL).forEach(function(k){ if(CL[k].name.toLowerCase()===name.toLowerCase()) id=k; });
+      var fresh=!id; if(!id) id='c'+Date.now().toString(36)+Math.floor(Math.random()*1296).toString(36);
+      clMsg('Saving...');
+      clApi('PUT','',{id:id,name:name,tool:TOOL,state:S}).then(function(){
+        var rec=CL[id]||{}; rec.name=CL[id]?CL[id].name:name; rec[TOOL]=JSON.parse(JSON.stringify(S)); CL[id]=rec; CUR=id;
+        try{ localStorage.setItem(clKey(),CUR); }catch(e){}
+        clRender(); clMsg((fresh?'New client saved: ':'Saved to ')+name+'.');
+      }).catch(function(){ clMsg('Could not save. Check your connection and try again.'); });
+    });
+    $('cldel').addEventListener('click',function(){
+      if(!CUR||!CL[CUR]) return; var n=CL[CUR].name;
+      if(!confirm('Delete client '+n+' and their saved quotes?')) return;
+      clApi('DELETE','?id='+encodeURIComponent(CUR)).then(function(){ delete CL[CUR]; CUR=''; try{ localStorage.setItem(clKey(),''); }catch(e){} clRender(); clMsg(n+' deleted.'); }).catch(function(){ clMsg('Could not delete. Try again.'); });
+    });
+  }
   function init(){
     load();
     if(!S.mm) S.mm='margin'; if(S.mp==null) S.mp=30; if(!S.qno) S.qno=newNo(); if(!S.qdate) S.qdate=today();
@@ -440,7 +492,7 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
     $('pick').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); doAdd(); } });
     $('pick').addEventListener('change',function(){ var v=this.value.trim().toLowerCase(); if(DATA.some(function(p){return p.n.toLowerCase()===v;})) doAdd(); });
     $('savedlist').addEventListener('click',function(e){ var b=e.target.closest('button[data-sk]'); if(!b) return; savePrice(b.getAttribute('data-sk'),''); });
-    loadSaved(); loadLogo();
+    loadSaved(); loadLogo(); initClients();
     $('logoup').addEventListener('click',function(){ $('logofile').click(); });
     $('logofile').addEventListener('change',function(){ handleLogoFile(this.files&&this.files[0]); this.value=''; });
     $('logorm').addEventListener('click',function(){ LOGO=null; showLogo(); putLogo(null); });

@@ -1,7 +1,9 @@
-// Saves each signed-in user's own prices, per part, in Workers KV.
+// Saves each signed-in user's own prices, logo and clients (with saved quotes) in Workers KV.
 // The user is identified by the Cloudflare Access login token, which is verified here.
 
 const MAX_KEYS = 2000;
+const MAX_CLIENTS = 150;
+const MAX_STATE = 60000;
 let certCache = null;
 
 function b64urlToBytes(s) {
@@ -53,11 +55,42 @@ function json(body, status = 200) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname !== '/api/prices' && url.pathname !== '/api/logo') return env.ASSETS.fetch(request);
+    if (url.pathname !== '/api/prices' && url.pathname !== '/api/logo' && url.pathname !== '/api/clients') return env.ASSETS.fetch(request);
 
     const email = await userEmail(request, env);
     if (!email) return json({ error: 'not signed in' }, 401);
     const kvKey = 'u:' + email;
+
+    if (url.pathname === '/api/clients') {
+      const ck = 'cl:' + email;
+      const all = (await env.PRICES.get(ck, 'json')) || {};
+      if (request.method === 'GET') return json({ clients: all });
+      if (request.method === 'DELETE') {
+        const id = url.searchParams.get('id') || '';
+        delete all[id];
+        await env.PRICES.put(ck, JSON.stringify(all));
+        return json({ ok: true });
+      }
+      if (request.method === 'PUT') {
+        let body;
+        try { body = await request.json(); } catch (e) { return json({ error: 'bad json' }, 400); }
+        const id = typeof body.id === 'string' ? body.id : '';
+        const name = typeof body.name === 'string' ? body.name.trim().slice(0, 80) : '';
+        if (!/^c[a-z0-9]{3,24}$/.test(id) || !name) return json({ error: 'bad client' }, 400);
+        if (!(id in all) && Object.keys(all).length >= MAX_CLIENTS) return json({ error: 'too many clients' }, 400);
+        const rec = all[id] || {};
+        rec.name = name;
+        rec.updated = Date.now();
+        if (body.tool === 'quote' || body.tool === 'margin') {
+          if (!body.state || typeof body.state !== 'object' || JSON.stringify(body.state).length > MAX_STATE) return json({ error: 'quote too large' }, 400);
+          rec[body.tool] = body.state;
+        }
+        all[id] = rec;
+        await env.PRICES.put(ck, JSON.stringify(all));
+        return json({ ok: true });
+      }
+      return json({ error: 'method not allowed' }, 405);
+    }
 
     if (url.pathname === '/api/logo') {
       const logoKey = 'logo:' + email;

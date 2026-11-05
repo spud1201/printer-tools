@@ -16,3 +16,7 @@ Prices are CAD from brand and retailer sites, collected November 2026.
 ## Saved prices
 
 The quote pages save each signed-in user's own price for each part, and one logo per user (shown on the printed quote). A Cloudflare Worker (`src/index.js`) stores them in Workers KV, keyed by the user's Cloudflare Access email. Access must stay switched on for the site, since it provides the login the Worker checks.
+
+## Clients
+
+Both quote tools have a Client card (shown once signed in). "Save to client" stores the current quote under the Customer name, per login, in KV (`cl:<email>`). Picking a saved client reloads their quote. The two quote tools share the client list but keep a separate saved quote each. API: `GET/PUT/DELETE /api/clients`.

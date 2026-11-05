@@ -200,13 +200,14 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function name(p){ return p.m.indexOf(p.b)===0 ? p.m : p.b + ' ' + p.m; }
   DATA.forEach(function(p,i){ p.i=i; p.n=name(p); });
+  var REAL={"TN760": 77.65, "TN660": 53.89, "TN850": 98.16, "TN830XL": 79.99, "DR730": 94.7, "DR820": 116.64, "DR630": 98.65, "DR830": 103.94, "TN229XLBK": 80.84, "TN436BK": 89.24, "TN450": 58.89, "TN360": 58.89, "TN750": 93.54, "DR420": 90.25, "TN350": 58.89, "TN221BK": 70.44}; /* compatible prices from inkhouse.ca, Nov 2026 */
   function hsh(s){ var h=2166136261; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return (h>>>0)/4294967296; }
   DATA.forEach(function(p){
     ['c','d'].forEach(function(k){
       var base=p[k].slice();
       base.forEach(function(x){
-        var r=hsh(p.m+'|'+x.t), v = x.p ? x.p*(0.28+r*0.22) : 25+r*70;
-        p[k].push({t:x.t, y:x.y, p:Math.round(v*100)/100, k:'Compatible', ph:true});
+        var r=hsh(p.m+'|'+x.t), v = x.p ? x.p*(0.28+r*0.22) : 25+r*70, rp=REAL[x.t];
+        p[k].push({t:x.t, y:x.y, p:rp!=null?rp:Math.round(v*100)/100, k:'Compatible', ph:true, real:rp!=null});
       });
     });
   });
@@ -309,12 +310,12 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
   function supLabel(list,sp){
     if(sp.opt===-2) return null;
     if(sp.opt===-1||!list[sp.opt]) return sp.part||'(part number needed)';
-    var x=list[sp.opt]; return (x.ph?'Compatible ':'')+x.t+(x.y?' ('+x.y.toLocaleString('en-US')+' pages)':'')+(x.ph&&+sp.price===x.p?' [placeholder price]':'');
+    var x=list[sp.opt]; return (x.ph?'Compatible ':'')+x.t+(x.y?' ('+x.y.toLocaleString('en-US')+' pages)':'')+(x.ph&&!x.real&&+sp.price===x.p?' [placeholder price]':'');
   }
   function optHtml(list,sp,none){
     var h='';
     if(none) h+='<option value="-2"'+(sp.opt===-2?' selected':'')+'>None</option>';
-    list.forEach(function(x,i){ h+='<option value="'+i+'"'+(sp.opt===i?' selected':'')+'>'+(x.ph?'Compatible: ':'')+esc(x.t)+(x.y?' · '+x.y.toLocaleString('en-US')+' pg':'')+(x.p!=null?' · '+money(x.p):'')+(x.ph?' (placeholder)':'')+'</option>'; });
+    list.forEach(function(x,i){ h+='<option value="'+i+'"'+(sp.opt===i?' selected':'')+'>'+(x.ph?'Compatible: ':'')+esc(x.t)+(x.y?' · '+x.y.toLocaleString('en-US')+' pg':'')+(x.p!=null?' · '+money(x.p):'')+(x.ph?(x.real?' (InkHouse price)':' (placeholder)'):'')+'</option>'; });
     h+='<option value="-1"'+(sp.opt===-1?' selected':'')+'>Other part number</option>';
     return h;
   }
@@ -325,7 +326,7 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
     h+='<label>Part<select data-f="opt" aria-label="'+label+' part">'+optHtml(list,sp,none)+'</select></label>';
     if(sp.opt===-1) h+='<label>Part number or description<input type="text" data-f="part" value="'+esc(sp.part)+'" placeholder="Enter part number"></label>';
     if(sp.opt!==-2){
-      var cur=(sp.opt>=0)?list[sp.opt]:null, phOn=cur&&cur.ph&&+sp.price===cur.p;
+      var cur=(sp.opt>=0)?list[sp.opt]:null, phOn=cur&&cur.ph&&!cur.real&&+sp.price===cur.p;
       h+='<div class="row"><div><div class="need">'+((sp.price==null||sp.price==='')?'Cost needed':(phOn?'Placeholder cost. Enter the real cost.':''))+'</div><div class="sellp" data-sell="'+(kind==='toner'?'t:'+idx:'d')+'">'+sellTxt(sp)+'</div></div><label>Qty<input class="num" type="number" min="0" step="1" data-f="qty" value="'+esc(sp.qty)+'"></label><label>Unit cost<input class="num" type="number" min="0" step="0.01" data-f="price" value="'+(sp.price==null?'':esc(sp.price))+'" placeholder="0.00"></label></div>';
     }
     return h+'</div>';

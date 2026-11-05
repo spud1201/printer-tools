@@ -20,3 +20,7 @@ The quote pages save each signed-in user's own price for each part, and one logo
 ## Clients
 
 Both quote tools have a Client card (shown once signed in). "Save to client" stores the current quote under the Customer name, per login, in KV (`cl:<email>`). Picking a saved client reloads their quote. The two quote tools share the client list but keep a separate saved quote each. API: `GET/PUT/DELETE /api/clients`.
+
+## Client Supplies
+
+`supplies.html` lists the printers on a saved client's quotes and the toner and drum each one takes, with a copy/print part list. It reads `/api/clients`. Printer lookups use the same DATA order as the quote tools, so add new printers to the end of the list in all of them.

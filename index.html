@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Printer Sales Tools</title>
+<style>
+:root{--bg:#F2F4F8;--surface:#fff;--ink:#121927;--muted:#566275;--line:#D8DEE8;--a:#2A59D6}
+@media (prefers-color-scheme:dark){:root{--bg:#0D121B;--surface:#151C28;--ink:#E9EDF4;--muted:#9AA6B8;--line:#263142;--a:#8CAEFF}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:24px max(16px,env(safe-area-inset-right)) 40px max(16px,env(safe-area-inset-left))}
+.wrap{max-width:36rem;margin:0 auto;display:grid;gap:12px}
+h1{margin:0;font-size:1.6rem;line-height:1.1}
+p{margin:.3rem 0 0;color:var(--muted)}
+a.card{display:block;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;text-decoration:none;color:inherit}
+a.card:active,a.card:hover{border-color:var(--a)}
+a.card b{display:block;font-size:1.1rem;color:var(--a)}
+a.card span{color:var(--muted);font-size:.95rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div><h1>Printer Sales Tools</h1><p>Quick tools for choosing and comparing printers on a customer call.</p></div>
+<a class="card" href="finder.html"><b>Printer Finder</b><span>Enter colour, speed, cost per copy and monthly pages. Get the closest match across Brother, Lexmark, HP, Xerox, Canon and Epson.</span></a>
+<a class="card" href="speed.html"><b>Print Speed Compare</b><span>Compare two printers side by side: speed, first page out and toner cost.</span></a>
+<a class="card" href="toner.html"><b>Toner Cost Compare</b><span>Cost per copy for original and compatible toner.</span></a>
+</div>
+</body>
+</html>

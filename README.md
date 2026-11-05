@@ -15,4 +15,4 @@ Prices are CAD from brand and retailer sites, collected November 2026.
 
 ## Saved prices
 
-The quote pages save each signed-in user's own price for each part. A Cloudflare Worker (`src/index.js`) stores them in Workers KV, keyed by the user's Cloudflare Access email. Access must stay switched on for the site, since it provides the login the Worker checks.
+The quote pages save each signed-in user's own price for each part, and one logo per user (shown on the printed quote). A Cloudflare Worker (`src/index.js`) stores them in Workers KV, keyed by the user's Cloudflare Access email. Access must stay switched on for the site, since it provides the login the Worker checks.

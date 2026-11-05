@@ -70,6 +70,12 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
 @media (max-width:30rem){.grid{grid-template-columns:minmax(0,1fr)}.row{grid-template-columns:minmax(0,1fr) 4rem 6rem}}
 
 .printdoc{display:none}
+.logobox{display:grid;gap:8px}
+.logobox .lt{font-size:.8rem;color:var(--muted);font-weight:600}
+.lrow{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.lprev{min-width:0;max-width:14rem;min-height:3.5rem;display:flex;align-items:center;background:#fff;border:1px dashed var(--line);border-radius:8px;padding:6px 10px}
+.lprev img{max-width:100%;max-height:4.5rem;display:block}
+.lbtns{display:flex;gap:8px;flex-wrap:wrap}
 .srow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;border-top:1px solid var(--line);padding:6px 0;font-size:.9rem}
 .skey{overflow-wrap:anywhere}
 @media print{
@@ -79,6 +85,7 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
   #savedcard{display:none!important}
   .printdoc{display:block!important}
   .pd h1{font-size:20pt;margin:0 0 4pt}
+  .pd img.logo{display:block;max-height:22mm;max-width:60mm;margin:0 0 8pt}
   .pd .co{white-space:pre-line;margin:0 0 10pt;font-size:10pt}
   .pd .meta{display:grid;grid-template-columns:1fr 1fr;gap:2pt 16pt;margin:0 0 12pt;font-size:10pt}
   .pd table{width:100%;border-collapse:collapse;font-size:10pt}
@@ -111,6 +118,12 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
       <label>Date<input id="qdate" type="date"></label>
       <label>Prepared by<input id="qby" type="text" autocomplete="off" placeholder="Your name"></label>
       <label class="full">Your company details (shown at the top of the printed quote)<input id="qco" type="text" autocomplete="off" placeholder="Company name, address, phone"></label>
+      <div class="full logobox" id="logobox" hidden>
+        <div class="lt">Your logo (shown at the top of the printed quote)</div>
+        <div class="lrow"><div class="lprev"><img id="logoimg" alt="Your logo" hidden><span id="nologo" class="hint">No logo yet</span></div>
+          <div class="lbtns"><input id="logofile" type="file" accept="image/png,image/jpeg" hidden><button id="logoup" type="button">Upload logo</button><button id="logorm" type="button" hidden>Remove logo</button></div></div>
+        <div class="hint" id="logomsg">PNG or JPG. Saved to your login.</div>
+      </div>
     </div>
   </section>
 
@@ -189,6 +202,40 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   function newNo(){ return 'QT-'+today().replace(/-/g,'')+'-'+String(Math.floor(Math.random()*900)+100); }
   function load(){ try{ var r=localStorage.getItem(KEY); if(r){ var o=JSON.parse(r); if(o&&o.lines){ S=o; S.lines.forEach(function(l){ uid=Math.max(uid,l.uid+1); if(!l.toners) l.toners=l.toner?[l.toner]:[]; }); } } }catch(e){} }
   function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
+  var LOGO=null;
+  function showLogo(){
+    $('logoimg').hidden=!LOGO; $('nologo').hidden=!!LOGO; $('logorm').hidden=!LOGO;
+    if(LOGO) $('logoimg').src=LOGO;
+    totals();
+  }
+  function loadLogo(){
+    fetch('/api/logo',{headers:{accept:'application/json'}}).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(j){ LOGO=j.logo||null; $('logobox').hidden=false; showLogo(); }).catch(function(){});
+  }
+  function putLogo(v){
+    var msg=$('logomsg');
+    return fetch('/api/logo',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({logo:v})}).then(function(r){ if(!r.ok) throw 0; msg.textContent=v?'Logo saved to your login.':'Logo removed.'; }).catch(function(){ msg.textContent='Could not save the logo. Check your connection.'; });
+  }
+  function handleLogoFile(file){
+    var msg=$('logomsg');
+    if(!file) return;
+    if(!/^image\/(png|jpeg)$/.test(file.type)){ msg.textContent='Choose a PNG or JPG image.'; return; }
+    var fr=new FileReader();
+    fr.onload=function(){
+      var img=new Image();
+      img.onload=function(){
+        var maxW=480, maxH=180, k=Math.min(1,maxW/img.width,maxH/img.height);
+        var w=Math.max(1,Math.round(img.width*k)), h=Math.max(1,Math.round(img.height*k));
+        var c=document.createElement('canvas'); c.width=w; c.height=h; var cx=c.getContext('2d'); cx.drawImage(img,0,0,w,h);
+        var out=c.toDataURL('image/png');
+        if(out.length>300000){ cx.globalCompositeOperation='destination-over'; cx.fillStyle='#fff'; cx.fillRect(0,0,w,h); out=c.toDataURL('image/jpeg',0.85); }
+        if(out.length>380000){ msg.textContent='That image is too detailed. Try a simpler or smaller logo.'; return; }
+        LOGO=out; showLogo(); putLogo(out);
+      };
+      img.onerror=function(){ msg.textContent='That file could not be read as an image.'; };
+      img.src=fr.result;
+    };
+    fr.readAsDataURL(file);
+  }
   var SAVED={}, SAVED_ON=false, saveTimer={};
   function partKey(list,sp){
     if(sp.opt>=0&&list[sp.opt]) return (list[sp.opt].ph?'compat ':'')+list[sp.opt].t;
@@ -308,7 +355,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     buildPrint(sub,tax);
   }
   function buildPrint(sub,tax){
-    var h='<div class="pd"><h1>Quote '+esc(S.qno||'')+'</h1>';
+    var h='<div class="pd">'+(LOGO?'<img class="logo" src="'+esc(LOGO)+'" alt="">':'')+'<h1>Quote '+esc(S.qno||'')+'</h1>';
     if(S.qco) h+='<p class="co">'+esc(S.qco)+'</p>';
     h+='<div class="meta"><div>Date: '+esc(S.qdate||'')+'</div><div>Customer: '+esc(S.cust||'')+'</div><div>Prepared by: '+esc(S.qby||'')+'</div></div>';
     h+='<table><thead><tr><th>Item</th><th class="n">Qty</th><th class="n">Unit price</th><th class="n">Amount</th></tr></thead><tbody>';
@@ -393,7 +440,10 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     $('pick').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); doAdd(); } });
     $('pick').addEventListener('change',function(){ var v=this.value.trim().toLowerCase(); if(DATA.some(function(p){return p.n.toLowerCase()===v;})) doAdd(); });
     $('savedlist').addEventListener('click',function(e){ var b=e.target.closest('button[data-sk]'); if(!b) return; savePrice(b.getAttribute('data-sk'),''); });
-    loadSaved();
+    loadSaved(); loadLogo();
+    $('logoup').addEventListener('click',function(){ $('logofile').click(); });
+    $('logofile').addEventListener('change',function(){ handleLogoFile(this.files&&this.files[0]); this.value=''; });
+    $('logorm').addEventListener('click',function(){ LOGO=null; showLogo(); putLogo(null); });
     if($('print')) $('print').addEventListener('click',function(){ window.print(); });
     $('copy').addEventListener('click',function(){
       var t=$('qtext'), msg=$('copymsg');

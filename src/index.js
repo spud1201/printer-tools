@@ -53,11 +53,27 @@ function json(body, status = 200) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname !== '/api/prices') return env.ASSETS.fetch(request);
+    if (url.pathname !== '/api/prices' && url.pathname !== '/api/logo') return env.ASSETS.fetch(request);
 
     const email = await userEmail(request, env);
     if (!email) return json({ error: 'not signed in' }, 401);
     const kvKey = 'u:' + email;
+
+    if (url.pathname === '/api/logo') {
+      const logoKey = 'logo:' + email;
+      if (request.method === 'GET') return json({ logo: (await env.PRICES.get(logoKey)) || null });
+      if (request.method === 'DELETE') { await env.PRICES.delete(logoKey); return json({ ok: true }); }
+      if (request.method === 'PUT') {
+        let body;
+        try { body = await request.json(); } catch (e) { return json({ error: 'bad json' }, 400); }
+        if (body.logo === null) { await env.PRICES.delete(logoKey); return json({ ok: true }); }
+        const v = body.logo;
+        if (typeof v !== 'string' || v.length > 400000 || !/^data:image\/(png|jpeg);base64,[A-Za-z0-9+\/=]+$/.test(v)) return json({ error: 'bad logo' }, 400);
+        await env.PRICES.put(logoKey, v);
+        return json({ ok: true });
+      }
+      return json({ error: 'method not allowed' }, 405);
+    }
 
     if (request.method === 'GET') {
       const prices = (await env.PRICES.get(kvKey, 'json')) || {};

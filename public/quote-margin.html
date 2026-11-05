@@ -439,15 +439,16 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
     return h;
   }
   function cpp(l,p,useSell){
-    var tot=0,n=0,miss=0;
+    var tot=0,n=0,miss=0,tn=0,dr=0,dn=0;
     supRows(l,p).forEach(function(a){ var sp=a[1],list=a[2]; if(sp.opt===-2) return;
       var x=(sp.opt>=0)?list[sp.opt]:((sp.opt===-1&&+sp.yield>0)?{y:+sp.yield}:null), pr=(sp.price==null||sp.price==='')?null:+sp.price;
-      if(x&&x.y&&pr!=null){ tot+=((useSell&&typeof sell==='function')?sell(pr):pr)/x.y; n++; } else miss++; });
-    return {v:tot,n:n,miss:miss};
+      if(x&&x.y&&pr!=null){ var cv=((useSell&&typeof sell==='function')?sell(pr):pr)/x.y; tot+=cv; n++; if(a[0]==='Drum'){ dr+=cv; dn++; } else tn+=cv; } else miss++; });
+    return {v:tot,n:n,miss:miss,t:tn,d:dr,dn:dn};
   }
-  function cppMg(l,p){ var a=cpp(l,p,false),b=cpp(l,p,true); if(!a.n) return cppTxt(a); return 'cost '+cppVal(a)+' · sells '+cppVal(b)+(a.miss?' (partial)':''); }
+  function cppMg(l,p){ var a=cpp(l,p,false),b=cpp(l,p,true); if(!a.n) return cppTxt(a); return 'cost '+cppVal(a)+cppSplit(a)+' · sells '+cppVal(b)+cppSplit(b)+(a.miss?' (partial)':''); }
   function cppVal(c){ return '$'+c.v.toFixed(4); }
-  function cppTxt(c){ if(!c.n) return 'Needs a price and page yield'; return cppVal(c)+' per page'+(c.miss?' (partial, '+c.miss+' item'+(c.miss>1?'s':'')+' missing)':''); }
+  function cppSplit(c){ return (c.dn&&c.n>c.dn)?' (toner/ink $'+c.t.toFixed(4)+' + drum $'+c.d.toFixed(4)+')':''; }
+  function cppTxt(c){ if(!c.n) return 'Needs a price and page yield'; return cppVal(c)+' per page'+cppSplit(c)+(c.miss?' (partial, '+c.miss+' item'+(c.miss>1?'s':'')+' missing)':''); }
   function render(){
     var box=$('lines');
     if(!S.lines.length){ box.innerHTML='<div class="card empty">No printers yet. Pick one above to start the quote.</div>'; }
@@ -484,7 +485,7 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
         var sp=a[1], lb=supLabel(a[2],sp); if(!lb) return;
         h+='<tr class="sub"><td>'+a[0]+': '+esc(lb)+'</td><td class="n">'+esc(sp.qty)+'</td><td class="n">'+(sp.price==null||sp.price===''?'':money(sell(sp.price)))+'</td><td class="n">'+money(supSell(sp))+'</td></tr>';
       });
-      var cc=cpp(l,p,true); if(cc.n&&!cc.miss) h+='<tr class="sub"><td colspan="4">Cost per page: '+cppVal(cc)+'</td></tr>';
+      var cc=cpp(l,p,true); if(cc.n&&!cc.miss) h+='<tr class="sub"><td colspan="4">Cost per page: '+cppVal(cc)+cppSplit(cc)+'</td></tr>';
       l.extras.forEach(function(e){ if(e.desc||e.price) h+='<tr class="sub"><td>'+esc(e.desc||'Supply')+'</td><td class="n">'+esc(e.qty)+'</td><td class="n">'+(e.price==null||e.price===''?'':money(sell(e.price)))+'</td><td class="n">'+money(r2(sell(e.price)*(+e.qty||0)))+'</td></tr>'; });
     });
     h+='</tbody></table><div class="totals"><div><span>Subtotal</span><span>'+money(sub)+'</span></div><div><span>Tax ('+(+S.tax||0)+'%)</span><span>'+money(tax)+'</span></div><div class="gt"><span>Total</span><span>'+money(sub+tax)+'</span></div></div>';
@@ -505,7 +506,7 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
         var sp=a[1], lb=supLabel(a[2],sp);
         if(lb) o.push('   '+a[0]+': '+lb+'  '+sp.qty+' x '+(sp.price==null||sp.price===''?'(price needed)':money(sell(sp.price)))+' = '+money(supSell(sp)));
       });
-      var cc=cpp(l,p,true); if(cc.n) o.push('   Cost per page: '+cppVal(cc)+(cc.miss?' (partial)':''));
+      var cc=cpp(l,p,true); if(cc.n) o.push('   Cost per page: '+cppVal(cc)+cppSplit(cc)+(cc.miss?' (partial)':''));
       l.extras.forEach(function(e){ if(e.desc||e.price) o.push('   Supply: '+(e.desc||'')+'  '+e.qty+' x '+money(sell(e.price))+' = '+money(r2(sell(e.price)*(+e.qty||0)))); });
     });
     o.push('');

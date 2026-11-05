@@ -551,7 +551,7 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
   function clMsg(t){ $('clmsg').textContent=t; }
   function clRender(){
     var ids=Object.keys(CL).sort(function(a,b){ return CL[a].name.toLowerCase()<CL[b].name.toLowerCase()?-1:1; });
-    var h='<option value="">No client selected</option>';
+    var h='<option value="">No client selected</option><option value="__new">+ New client quote (clears this quote)</option>';
     ids.forEach(function(id){ h+='<option value="'+esc(id)+'"'+(id===CUR?' selected':'')+'>'+esc(CL[id].name)+(CL[id][TOOL]?'':' (no quote here yet)')+'</option>'; });
     $('clsel').innerHTML=h; if(!CL[CUR]) CUR=''; $('clsel').value=CUR; $('cldel').hidden=!CUR;
   }
@@ -574,6 +574,13 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
       $('clientcard').hidden=false; clRender();
     }).catch(function(){});
     $('clsel').addEventListener('change',function(){
+      if(this.value==='__new'){
+        CUR=''; try{ localStorage.setItem(clKey(),''); }catch(e){}
+        $('clear').click(); clRender();
+        clMsg('New quote started. Type the customer name, add printers, then press Save to client.');
+        try{ $('cust').focus(); }catch(e){}
+        return;
+      }
       CUR=this.value; try{ localStorage.setItem(clKey(),CUR); }catch(e){}
       $('cldel').hidden=!CUR; if(!CUR){ clMsg('No client selected. The quote below is not tied to a client.'); return; }
       var c=CL[CUR];

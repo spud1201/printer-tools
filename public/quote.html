@@ -100,6 +100,10 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
   .pd .fine{margin-top:14pt;font-size:8.5pt;color:#444}
   @page{margin:14mm}
 }
+.sugg{max-height:15rem;overflow-y:auto;overscroll-behavior:contain;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.sugg button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:12px;min-height:44px;font-weight:500;overflow-wrap:anywhere}
+.sugg button:last-child{border-bottom:0}
+.sugg .none{padding:12px;color:var(--muted);font-size:.9rem}
 </style>
 </head>
 <body>
@@ -139,10 +143,9 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
   <section class="card" aria-label="Add a printer">
     <h2>Add a printer</h2>
     <div class="add">
-      <input id="pick" type="search" list="plist" autocomplete="off" placeholder="Type a brand or model, e.g. Brother HL-L2405W" aria-label="Printer">
+      <input id="pick" type="search" autocomplete="off" placeholder="Type a brand or model, e.g. Brother HL-L2405W" aria-label="Printer">
       <button id="addbtn" class="primary" type="button">Add</button>
     </div>
-    <datalist id="plist"></datalist>
     <div class="hint" id="pickmsg">183 models from Brother, Lexmark, HP, Xerox, Canon and Epson.</div>
   </section>
 
@@ -467,7 +470,7 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
     if(!S.qno) S.qno=newNo(); if(!S.qdate) S.qdate=today();
     fill('cust','cust'); fill('qno','qno'); fill('qdate','qdate'); fill('qby','qby'); fill('qco','qco');
     $('taxp').value=S.tax; $('taxp').addEventListener('input',function(){ S.tax=this.value; save(); totals(); });
-    var dl=''; DATA.forEach(function(p){ dl+='<option value="'+esc(p.n)+'"></option>'; }); $('plist').innerHTML=dl;
+    
     function doAdd(){
       var v=$('pick').value.trim().toLowerCase(), hit=null;
       DATA.forEach(function(p){ if(p.n.toLowerCase()===v) hit=p; });
@@ -477,6 +480,21 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
     }
     $('addbtn').addEventListener('click',doAdd);
     $('pick').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); doAdd(); } });
+    (function(){
+      var inp=$('pick'), box=document.createElement('div'); box.className='sugg'; box.hidden=true; box.setAttribute('role','listbox');
+      inp.parentNode.insertAdjacentElement('afterend',box);
+      function show(){
+        var q=inp.value.trim().toLowerCase(); if(!q){ box.hidden=true; return; }
+        var tk=q.split(/\s+/), m=DATA.filter(function(p){ var n=p.n.toLowerCase(); return tk.every(function(t){ return n.indexOf(t)>=0; }); });
+        if(m.length===1&&m[0].n.toLowerCase()===q){ box.hidden=true; return; }
+        var h=''; m.slice(0,60).forEach(function(p){ h+='<button type="button" role="option" data-n="'+esc(p.n)+'">'+esc(p.n)+'</button>'; });
+        if(m.length>60) h+='<div class="none">Showing 60 of '+m.length+'. Keep typing to narrow it down.</div>';
+        if(!m.length) h='<div class="none">No models match.</div>';
+        box.innerHTML=h; box.hidden=false; box.scrollTop=0;
+      }
+      inp.addEventListener('input',show);
+      box.addEventListener('click',function(e){ var b=e.target.closest('button[data-n]'); if(!b) return; inp.value=b.getAttribute('data-n'); box.hidden=true; doAdd(); });
+    })();
     $('pick').addEventListener('change',function(){ var v=this.value.trim().toLowerCase(); if(DATA.some(function(p){return p.n.toLowerCase()===v;})) doAdd(); });
     $('savedlist').addEventListener('click',function(e){ var b=e.target.closest('button[data-sk]'); if(!b) return; savePrice(b.getAttribute('data-sk'),''); });
     loadSaved(); loadLogo(); initClients();

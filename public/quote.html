@@ -174,7 +174,14 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
 <div class="wrap" style="margin-top:14px"><section id="savedcard" class="card" aria-label="My saved prices" hidden>
     <h2>My saved prices</h2>
     <div class="hint">Saved to your login (<span id="saveduser"></span>), so they follow you to any device. The same part gets the same price on every quote. Clear a price to go back to the list price.</div>
-    <div id="savedlist"></div>
+    <div class="impbox" style="margin:10px 0;padding:12px;border:1px dashed var(--line);border-radius:10px">
+      <b>Import a price list</b>
+      <div class="hint">Upload an Excel (.xlsx, .xls) or .csv file with a part number column and a price column (headers such as Part Number and Price work best). Matching toner and drum numbers get your price on every quote.</div>
+      <input id="impfile" type="file" accept=".xlsx,.xls,.csv" hidden>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button id="impbtn" type="button">Choose price list</button><button id="impapply" type="button" hidden>Apply prices</button><button id="impclear" type="button">Remove all saved prices</button></div>
+      <div class="hint" id="impprev" role="status"></div>
+    </div>
+    <div id="savedlist" style="max-height:16rem;overflow:auto"></div>
     <div class="hint" id="savedmsg"></div>
   </section></div>
 <section id="printdoc" class="printdoc" aria-hidden="true"></section>
@@ -262,6 +269,88 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
     keys.forEach(function(k){ h+='<div class="srow"><span class="skey">'+esc(k)+'</span><span class="mono">'+money(SAVED[k])+'</span><button class="del" type="button" data-sk="'+esc(k)+'" aria-label="Remove saved price for '+esc(k)+'">×</button></div>'; });
     $('savedlist').innerHTML=h||'<div class="hint">No saved prices yet. Change a price on a quote and it is saved here.</div>';
   }
+  var XLSX_URL='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', IMP=null, PMAP=null;
+  function nrm(s){ return String(s==null?'':s).toUpperCase().replace(/[^A-Z0-9]/g,''); }
+  function buildPMap(){
+    if(PMAP) return PMAP; PMAP={};
+    DATA.forEach(function(p){ [p.c,p.d].forEach(function(l){ l.forEach(function(x){
+      var toks=String(x.t).split(/\s+/); toks.push(x.t);
+      toks.forEach(function(tk){ var k=nrm(tk); if(k.length<3||!/\d/.test(k)) return; (PMAP[k]=PMAP[k]||{})[x.t]=1; });
+    }); }); });
+    return PMAP;
+  }
+  function numOf(v){ if(typeof v==='number') return isFinite(v)?v:null; if(typeof v!=='string') return null; var s=v.replace(/[^0-9.,-]/g,'').replace(/,/g,''); if(!/\d/.test(s)) return null; var n=parseFloat(s); return isFinite(n)?n:null; }
+  function loadXlsx(){
+    return new Promise(function(res,rej){
+      if(window.XLSX) return res(window.XLSX);
+      var s=document.createElement('script'); s.src=XLSX_URL; s.onload=function(){ res(window.XLSX); }; s.onerror=function(){ rej(new Error('lib')); }; document.head.appendChild(s);
+    });
+  }
+  function readRows(file){
+    return loadXlsx().then(function(X){
+      return new Promise(function(res,rej){
+        var fr=new FileReader();
+        fr.onload=function(){ try{ var wb=X.read(fr.result,{type:'array'}); var rows=[]; wb.SheetNames.forEach(function(n){ rows=rows.concat(X.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''})); }); res(rows); }catch(e){ rej(e); } };
+        fr.onerror=function(){ rej(new Error('read')); };
+        fr.readAsArrayBuffer(file);
+      });
+    });
+  }
+  function parseRows(rows){
+    var pc=-1, cc=-1;
+    for(var i=0;i<Math.min(rows.length,12)&&pc<0;i++){
+      var r=rows[i]||[], a=-1, b=-1;
+      r.forEach(function(c,j){ var t=String(c).toLowerCase(); if(a<0&&/part|sku|item|model|mfr|product|number|code/.test(t)&&!/price|cost/.test(t)) a=j; if(b<0&&/price|cost|\$/.test(t)) b=j; });
+      if(a>=0&&b>=0){ pc=a; cc=b; }
+    }
+    var out=[];
+    rows.forEach(function(r){
+      r=r||[]; var part=null, price=null;
+      if(pc>=0){ part=String(r[pc]==null?'':r[pc]).trim(); price=numOf(r[cc]); }
+      else { part=String(r[0]==null?'':r[0]).trim(); for(var j=1;j<r.length&&price==null;j++) price=numOf(r[j]); }
+      if(part&&/\d/.test(part)&&price!=null&&price>0&&price<1000000) out.push({part:part,price:Math.round(price*100)/100});
+    });
+    return out;
+  }
+  function planImport(items){
+    var map=buildPMap(), bulk={}, hit=0, miss=[];
+    items.forEach(function(it){
+      var k=nrm(it.part), m=map[k];
+      if(m){ hit++; Object.keys(m).forEach(function(t){ bulk[t]=it.price; }); } else miss.push(it.part);
+    });
+    return {bulk:bulk, hit:hit, miss:miss, total:items.length};
+  }
+  function applySavedToLines(){
+    S.lines.forEach(function(l){ var p=DATA[l.key];
+      l.toners.forEach(function(sp){ var k=partKey(p.c,sp); if(k&&SAVED[k]!=null&&sp.opt>=0&&!p.c[sp.opt].ph) sp.price=SAVED[k]; });
+      var kd=partKey(p.d,l.drum); if(kd&&SAVED[kd]!=null&&l.drum.opt>=0) l.drum.price=SAVED[kd];
+    });
+    save(); render();
+  }
+  $('impbtn').addEventListener('click',function(){ $('impfile').click(); });
+  $('impfile').addEventListener('change',function(){
+    var f=this.files&&this.files[0]; this.value=''; if(!f) return;
+    $('impapply').hidden=true; IMP=null; $('impprev').textContent='Reading '+f.name+'...';
+    readRows(f).then(function(rows){
+      var items=parseRows(rows);
+      if(!items.length){ $('impprev').textContent='No part number and price pairs found. Use one column for the part number and one for the price.'; return; }
+      var pl=planImport(items); IMP=pl;
+      var n=Object.keys(pl.bulk).length;
+      $('impprev').textContent=pl.hit+' of '+pl.total+' rows match parts in this tool ('+n+' toner or drum entries will be priced).'+(pl.miss.length?' Not found: '+pl.miss.slice(0,12).join(', ')+(pl.miss.length>12?' and '+(pl.miss.length-12)+' more':'')+'.':'');
+      $('impapply').hidden=!n;
+    }).catch(function(){ $('impprev').textContent='That file could not be read. Try saving it as .xlsx or .csv.'; });
+  });
+  $('impapply').addEventListener('click',function(){
+    if(!IMP) return; var b=IMP.bulk; $('impapply').hidden=true; $('impprev').textContent='Saving...';
+    fetch('/api/prices',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({bulk:b})}).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(){
+      Object.keys(b).forEach(function(k){ SAVED[k]=b[k]; });
+      renderSaved(); applySavedToLines(); IMP=null; $('impprev').textContent='Prices applied and saved to your login.';
+    }).catch(function(){ $('impprev').textContent='Could not save the prices. Check your connection or the 2,000 saved price limit.'; });
+  });
+  $('impclear').addEventListener('click',function(){
+    if(!window.confirm('Remove all of your saved prices?')) return;
+    fetch('/api/prices',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({clear:true})}).then(function(r){ if(!r.ok) throw 0; SAVED={}; renderSaved(); $('impprev').textContent='All saved prices removed. Reload to see list prices.'; }).catch(function(){ $('impprev').textContent='Could not remove saved prices.'; });
+  });
   function loadSaved(){
     fetch('/api/prices',{headers:{accept:'application/json'}}).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(j){
       SAVED=j.prices||{}; SAVED_ON=true; $('savedcard').hidden=false; $('saveduser').textContent=j.email||'';

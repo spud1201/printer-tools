@@ -123,6 +123,19 @@ export default {
     if (request.method === 'PUT') {
       let body;
       try { body = await request.json(); } catch (e) { return json({ error: 'bad json' }, 400); }
+      if (body.clear === true) { await env.PRICES.delete(kvKey); return json({ ok: true }); }
+      if (body.bulk && typeof body.bulk === 'object' && !Array.isArray(body.bulk)) {
+        const cur = (await env.PRICES.get(kvKey, 'json')) || {};
+        for (const [k0, v] of Object.entries(body.bulk)) {
+          const k = String(k0).trim().slice(0, 140);
+          const p = Number(v);
+          if (!k || !isFinite(p) || p < 0 || p > 1000000) continue;
+          cur[k] = Math.round(p * 100) / 100;
+        }
+        if (Object.keys(cur).length > MAX_KEYS) return json({ error: 'too many saved prices' }, 400);
+        await env.PRICES.put(kvKey, JSON.stringify(cur));
+        return json({ ok: true, count: Object.keys(cur).length });
+      }
       const key = typeof body.key === 'string' ? body.key.trim().slice(0, 140) : '';
       if (!key) return json({ error: 'missing key' }, 400);
       const prices = (await env.PRICES.get(kvKey, 'json')) || {};

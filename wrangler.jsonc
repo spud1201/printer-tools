@@ -1,5 +1,17 @@
 {
   "name": "printer-tools",
+  "main": "src/index.js",
   "compatibility_date": "2026-11-01",
-  "assets": { "directory": "./public" }
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "kv_namespaces": [
+    { "binding": "PRICES", "id": "5c58bdc6cf7043ba96c5f9f2b74e00a0" }
+  ],
+  "vars": {
+    "TEAM_DOMAIN": "quiet-block-1c29.cloudflareaccess.com",
+    "POLICY_AUD": "8829103bbec4e94fd854df2347175a2021879b4d26e3bb746d02494c613044a4"
+  }
 }

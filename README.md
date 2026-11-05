@@ -12,3 +12,7 @@ Mobile-friendly tools for printer and toner sales. Static HTML, no build step. S
 - `data/` – source spreadsheets (Canadian models, supplies, prices)
 
 Prices are CAD from brand and retailer sites, collected November 2026.
+
+## Saved prices
+
+The quote pages save each signed-in user's own price for each part. A Cloudflare Worker (`src/index.js`) stores them in Workers KV, keyed by the user's Cloudflare Access email. Access must stay switched on for the site, since it provides the login the Worker checks.

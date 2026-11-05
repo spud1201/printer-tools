@@ -81,6 +81,7 @@ export default {
         const rec = all[id] || {};
         rec.name = name;
         rec.updated = Date.now();
+        if (typeof body.notes === 'string') rec.notes = body.notes.slice(0, 4000);
         if (body.tool === 'quote' || body.tool === 'margin') {
           if (!body.state || typeof body.state !== 'object' || JSON.stringify(body.state).length > MAX_STATE) return json({ error: 'quote too large' }, 400);
           rec[body.tool] = body.state;

@@ -107,7 +107,7 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
 .sup .pn{font-family:var(--font-data);font-weight:500;overflow-wrap:anywhere}
 .sup .pr{font-family:var(--font-data);text-align:right;white-space:nowrap}
 .sup .yl{grid-column:2/-1;color:var(--muted);font-size:.82rem}
-@media print{body{background:#fff}.noprint{display:none!important}}
+@media print{.notesprint:not([hidden]){display:block!important;white-space:pre-wrap;border-top:1px solid #999;padding-top:8px;margin-top:10px}body{background:#fff}.noprint{display:none!important}}
 .add{grid-template-columns:minmax(0,1fr) auto auto!important}
 .arrow{min-width:44px;padding:9px 0;font-size:1rem;line-height:1}
 .sugg{max-height:15rem;overflow-y:auto;overscroll-behavior:contain;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
@@ -134,7 +134,13 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
     </div>
     <div class="hint" id="addmsg"></div>
   </section>
+  <section class="card noprint" id="notescard" aria-label="Notes" hidden>
+    <h2>Notes</h2>
+    <textarea id="notes" maxlength="4000" aria-label="Client notes" placeholder="Contact, delivery, contract, anything to remember about this client" style="min-height:8rem;font-family:var(--font-display);font-size:1rem"></textarea>
+    <div class="hint" id="notemsg">Saved to this client as you type.</div>
+  </section>
   <div id="out" class="wrap" style="gap:14px"></div>
+  <div id="notesprint" class="notesprint" hidden></div>
   <section class="card noprint" id="copycard" aria-label="Copy list" hidden>
     <h2>Part list</h2>
     <textarea id="txt" readonly aria-label="Part list"></textarea>
@@ -168,7 +174,9 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
   function pickedSet(e,list,sec){return e.picked;}
   function render(){
     var id=$('sel').value, out=$('out'), c=CL[id];
-    $('addcard').hidden=!c;
+    if(!c) shownId='';
+    $('addcard').hidden=!c; $('notescard').hidden=!c;
+    if(c){ if(shownId!==id){ $('notes').value=c.notes||''; shownId=id; } var np=(c.notes||'').trim(); $('notesprint').hidden=!np; $('notesprint').textContent=np?'Notes: '+np:''; }
     if(!c){ out.innerHTML=''; $('copycard').hidden=true; return; }
     var ps=printersFor(c), h='', t='Supplies for '+c.name+'\n';
     if(!ps.length){ out.innerHTML='<section class="card"><div class="hint">'+esc(c.name)+' has no printers saved yet. Add printers in a quote tool and press Save to client.</div></section>'; $('copycard').hidden=true; return; }
@@ -188,6 +196,7 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
       if(!any){ h+='<div class="hint">No toner or drum part numbers on file for this model.'+(p.s?' '+esc(p.s):'')+'</div>'; t+='  No parts on file\n'; }
       h+='</section>';
     });
+    if((c.notes||'').trim()) t+='\nNotes: '+c.notes.trim()+'\n';
     out.innerHTML=h; $('txt').value=t; $('copycard').hidden=false; $('cm').textContent='';
   }
   function fillSel(){
@@ -247,6 +256,13 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
     var backup={quote:c.quote&&JSON.parse(JSON.stringify(c.quote)),margin:c.margin&&JSON.parse(JSON.stringify(c.margin))}, jobs=[];
     ['quote','margin'].forEach(function(t){ if(c[t]&&c[t].lines){ c[t].lines=c[t].lines.filter(function(l){ return l.key!==k; }); jobs.push(put(id,t)); } });
     Promise.all(jobs).then(function(){ addMsg(DATA[k].n+' removed.'); render(); }).catch(function(){ c.quote=backup.quote; c.margin=backup.margin; addMsg('Could not remove. Try again.'); render(); });
+  });
+  var noteT=null, shownId='';
+  $('notes').addEventListener('input',function(){
+    var id=$('sel').value, c=CL[id]; if(!c) return; var v=this.value; c.notes=v; $('notemsg').textContent='Saving...';
+    clearTimeout(noteT); noteT=setTimeout(function(){
+      fetch('/api/clients',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({id:id,name:c.name,notes:v})}).then(function(r){ if(!r.ok) throw 0; $('notemsg').textContent='Saved to '+c.name+'.'; render(); }).catch(function(){ $('notemsg').textContent='Could not save the note. Check your connection.'; });
+    },800);
   });
   $('sel').addEventListener('change',function(){ try{ localStorage.setItem('supplies-client',this.value); }catch(e){} render(); });
   $('print').addEventListener('click',function(){ window.print(); });

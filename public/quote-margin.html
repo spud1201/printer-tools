@@ -101,6 +101,8 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
   .pd .fine{margin-top:14pt;font-size:8.5pt;color:#444}
   @page{margin:14mm}
 }
+.add{grid-template-columns:minmax(0,1fr) auto auto!important}
+.arrow{min-width:44px;padding:9px 0;font-size:1rem;line-height:1}
 .sugg{max-height:15rem;overflow-y:auto;overscroll-behavior:contain;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
 .sugg button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:12px;min-height:44px;font-weight:500;overflow-wrap:anywhere}
 .sugg button:last-child{border-bottom:0}
@@ -153,7 +155,7 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
   <section class="card" aria-label="Add a printer">
     <h2>Add a printer</h2>
     <div class="add">
-      <input id="pick" type="search" autocomplete="off" placeholder="Type a brand or model, e.g. Brother HL-L2405W" aria-label="Printer">
+      <input id="pick" type="search" autocomplete="off" placeholder="Brand or model" aria-label="Printer">
       <button id="addbtn" class="primary" type="button">Add</button>
     </div>
     <div class="hint" id="pickmsg">183 models from Brother, Lexmark, HP, Xerox, Canon and Epson.</div>
@@ -511,16 +513,22 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
       var inp=$('pick'), box=document.createElement('div'); box.className='sugg'; box.hidden=true; box.setAttribute('role','listbox');
       inp.parentNode.insertAdjacentElement('afterend',box);
       function show(){
-        var q=inp.value.trim().toLowerCase(); if(!q){ box.hidden=true; return; }
-        var tk=q.split(/\s+/), m=DATA.filter(function(p){ var n=p.n.toLowerCase(); return tk.every(function(t){ return n.indexOf(t)>=0; }); });
-        if(m.length===1&&m[0].n.toLowerCase()===q){ box.hidden=true; return; }
-        var h=''; m.slice(0,60).forEach(function(p){ h+='<button type="button" role="option" data-n="'+esc(p.n)+'">'+esc(p.n)+'</button>'; });
+        var q=inp.value.trim().toLowerCase(); if(!q&&!openAll){ box.hidden=true; return; }
+        var tk=q?q.split(/\s+/):[], m=DATA.filter(function(p){ var n=p.n.toLowerCase(); return tk.every(function(t){ return n.indexOf(t)>=0; }); });
+        if(q&&m.length===1&&m[0].n.toLowerCase()===q){ box.hidden=true; return; }
+        var h=''; m.slice(0,openAll&&!q?400:60).forEach(function(p){ h+='<button type="button" role="option" data-n="'+esc(p.n)+'">'+esc(p.n)+'</button>'; });
         if(m.length>60) h+='<div class="none">Showing 60 of '+m.length+'. Keep typing to narrow it down.</div>';
         if(!m.length) h='<div class="none">No models match.</div>';
         box.innerHTML=h; box.hidden=false; box.scrollTop=0;
       }
+      var openAll=false, arr=document.createElement('button'); arr.type='button'; arr.className='arrow'; arr.innerHTML='&#9662;'; arr.setAttribute('aria-label','Show all printers'); arr.setAttribute('aria-expanded','false');
+      $('addbtn').parentNode.insertBefore(arr,$('addbtn'));
+      arr.addEventListener('click',function(){
+        if(!box.hidden){ openAll=false; box.hidden=true; arr.setAttribute('aria-expanded','false'); return; }
+        openAll=true; arr.setAttribute('aria-expanded','true'); show();
+      });
       inp.addEventListener('input',show);
-      box.addEventListener('click',function(e){ var b=e.target.closest('button[data-n]'); if(!b) return; inp.value=b.getAttribute('data-n'); box.hidden=true; doAdd(); });
+      box.addEventListener('click',function(e){ var b=e.target.closest('button[data-n]'); if(!b) return; inp.value=b.getAttribute('data-n'); box.hidden=true; openAll=false; arr.setAttribute('aria-expanded','false'); doAdd(); });
     })();
     $('pick').addEventListener('change',function(){ var v=this.value.trim().toLowerCase(); if(DATA.some(function(p){return p.n.toLowerCase()===v;})) doAdd(); });
     $('savedlist').addEventListener('click',function(e){ var b=e.target.closest('button[data-sk]'); if(!b) return; savePrice(b.getAttribute('data-sk'),''); });

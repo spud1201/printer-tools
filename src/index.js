@@ -82,6 +82,12 @@ export default {
         rec.name = name;
         rec.updated = Date.now();
         if (typeof body.notes === 'string') rec.notes = body.notes.slice(0, 4000);
+        if (body.pnote && Number.isInteger(body.pnote.key) && body.pnote.key >= 0 && body.pnote.key < 100000 && typeof body.pnote.text === 'string') {
+          rec.pnotes = rec.pnotes || {};
+          const t = body.pnote.text.trim().slice(0, 500);
+          if (!t) delete rec.pnotes[body.pnote.key];
+          else if (body.pnote.key in rec.pnotes || Object.keys(rec.pnotes).length < 300) rec.pnotes[body.pnote.key] = t;
+        }
         if (body.tool === 'quote' || body.tool === 'margin') {
           if (!body.state || typeof body.state !== 'object' || JSON.stringify(body.state).length > MAX_STATE) return json({ error: 'quote too large' }, 400);
           rec[body.tool] = body.state;

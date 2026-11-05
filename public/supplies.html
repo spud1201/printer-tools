@@ -104,6 +104,9 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
 .sup{display:grid;grid-template-columns:3.6rem minmax(0,1fr) auto;gap:4px 10px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line);font-size:.92rem}
 .sup:first-of-type{border-top:0}
 .sup .k{color:var(--muted);font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.pnote{display:grid;gap:4px;margin-top:2px;font-size:.8rem}
+.pnprint{display:none}
+@media print{.pnprint{display:block;font-size:10pt;margin-top:4px}}
 .sup .pn{font-family:var(--font-data);font-weight:500;overflow-wrap:anywhere}
 .sup .pr{font-family:var(--font-data);text-align:right;white-space:nowrap}
 .sup .yl{grid-column:2/-1;color:var(--muted);font-size:.82rem}
@@ -174,6 +177,7 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
   function pickedSet(e,list,sec){return e.picked;}
   function render(){
     var id=$('sel').value, out=$('out'), c=CL[id];
+    var ae=document.activeElement, fk=(ae&&ae.getAttribute&&ae.getAttribute('data-pn')), fs=fk!=null?ae.selectionStart:0;
     if(!c) shownId='';
     $('addcard').hidden=!c; $('notescard').hidden=!c;
     if(c){ if(shownId!==id){ $('notes').value=c.notes||''; shownId=id; } var np=(c.notes||'').trim(); $('notesprint').hidden=!np; $('notesprint').textContent=np?'Notes: '+np:''; }
@@ -194,10 +198,14 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
         });
       });
       if(!any){ h+='<div class="hint">No toner or drum part numbers on file for this model.'+(p.s?' '+esc(p.s):'')+'</div>'; t+='  No parts on file\n'; }
+      var pn=((c.pnotes&&c.pnotes[p.i])||'');
+      h+='<label class="pnote noprint">Printer note<input type="text" data-pn="'+p.i+'" maxlength="500" autocomplete="off" placeholder="Location, serial number, anything to remember" value="'+esc(pn)+'"></label>';
+      if(pn){ h+='<div class="pnprint">Note: '+esc(pn)+'</div>'; t+='  Note: '+pn+'\n'; }
       h+='</section>';
     });
     if((c.notes||'').trim()) t+='\nNotes: '+c.notes.trim()+'\n';
-    out.innerHTML=h; $('txt').value=t; $('copycard').hidden=false; $('cm').textContent='';
+    out.innerHTML=h; $('txt').value=t;
+    if(fk!=null){ var ne=out.querySelector('input[data-pn="'+fk+'"]'); if(ne){ ne.focus(); try{ ne.setSelectionRange(fs,fs); }catch(e){} } } $('copycard').hidden=false; $('cm').textContent='';
   }
   function fillSel(){
     var ids=Object.keys(CL).sort(function(a,b){return CL[a].name.toLowerCase()<CL[b].name.toLowerCase()?-1:1;});
@@ -255,6 +263,7 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
     if(!confirm('Remove '+DATA[k].n+' from '+c.name+'? It is removed from their saved quotes.')) return;
     var backup={quote:c.quote&&JSON.parse(JSON.stringify(c.quote)),margin:c.margin&&JSON.parse(JSON.stringify(c.margin))}, jobs=[];
     ['quote','margin'].forEach(function(t){ if(c[t]&&c[t].lines){ c[t].lines=c[t].lines.filter(function(l){ return l.key!==k; }); jobs.push(put(id,t)); } });
+    if(c.pnotes&&c.pnotes[k]){ delete c.pnotes[k]; jobs.push(fetch('/api/clients',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({id:id,name:c.name,pnote:{key:k,text:''}})})); }
     Promise.all(jobs).then(function(){ addMsg(DATA[k].n+' removed.'); render(); }).catch(function(){ c.quote=backup.quote; c.margin=backup.margin; addMsg('Could not remove. Try again.'); render(); });
   });
   var noteT=null, shownId='';
@@ -262,6 +271,15 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
     var id=$('sel').value, c=CL[id]; if(!c) return; var v=this.value; c.notes=v; $('notemsg').textContent='Saving...';
     clearTimeout(noteT); noteT=setTimeout(function(){
       fetch('/api/clients',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({id:id,name:c.name,notes:v})}).then(function(r){ if(!r.ok) throw 0; $('notemsg').textContent='Saved to '+c.name+'.'; render(); }).catch(function(){ $('notemsg').textContent='Could not save the note. Check your connection.'; });
+    },800);
+  });
+  var pnT={};
+  $('out').addEventListener('input',function(e){
+    var el=e.target.closest&&e.target.closest('input[data-pn]'); if(!el) return;
+    var id=$('sel').value, c=CL[id], k=+el.getAttribute('data-pn'), v=el.value; if(!c) return;
+    c.pnotes=c.pnotes||{}; if(v.trim()) c.pnotes[k]=v; else delete c.pnotes[k];
+    clearTimeout(pnT[k]); pnT[k]=setTimeout(function(){
+      fetch('/api/clients',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({id:id,name:c.name,pnote:{key:k,text:v}})}).then(function(r){ if(!r.ok) throw 0; addMsg('Note saved.'); render(); }).catch(function(){ addMsg('Could not save the note. Check your connection.'); });
     },800);
   });
   $('sel').addEventListener('change',function(){ try{ localStorage.setItem('supplies-client',this.value); }catch(e){} render(); });

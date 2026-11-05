@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Machine Compare</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F2F4F8; --surface:#FFFFFF; --ink:#121927; --muted:#566275; --line:#D8DEE8; --track:#E4E9F1;
+  --a:#2A59D6; --a-ink:#2A59D6; --on-a:#FFFFFF; --warn-bg:#FFF1DD; --warn-ink:#8A4B00; --ok-ink:#17703A;
+  --font-display:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-data:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D121B; --surface:#151C28; --ink:#E9EDF4; --muted:#9AA6B8; --line:#263142; --track:#222C3B;
+    --a:#6F98FF; --a-ink:#8CAEFF; --on-a:#0D121B; --warn-bg:#3A2A10; --warn-ink:#F5C57A; --ok-ink:#6FD39A; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D121B; --surface:#151C28; --ink:#E9EDF4; --muted:#9AA6B8; --line:#263142; --track:#222C3B;
+  --a:#6F98FF; --a-ink:#8CAEFF; --on-a:#0D121B; --warn-bg:#3A2A10; --warn-ink:#F5C57A; --ok-ink:#6FD39A; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-display);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;
+  padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:46rem;margin:0 auto;display:grid;gap:14px}
+h1{margin:0;font-size:1.5rem;line-height:1.1;font-weight:800;font-stretch:112%;letter-spacing:-.01em}
+h2{margin:0;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h3{margin:0;font-size:1.05rem;line-height:1.2;font-weight:700;overflow-wrap:anywhere}
+.sub{margin:.35rem 0 0;color:var(--muted)}
+.back{font-size:.85rem;color:var(--a-ink);text-decoration:none;font-weight:600}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:12px;min-width:0}
+textarea{width:100%;min-height:6rem;resize:vertical;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;color:var(--ink);font-family:var(--font-data);font-size:16px;line-height:1.5}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:9px 14px;font-weight:600;font-size:.9rem}
+button.primary{background:var(--a);color:var(--on-a);border-color:var(--a)}
+button.sug{padding:4px 9px;font-family:var(--font-data);font-size:.8rem;font-weight:500}
+:focus-visible{outline:2px solid var(--a);outline-offset:2px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.hint{font-size:.8rem;color:var(--muted)}
+.mono{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+.part{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:10px}
+.part:first-of-type{border-top:0;padding-top:0}
+.pl{display:flex;gap:8px;flex-wrap:wrap;align-items:baseline;font-size:.85rem}
+.pl .pn{font-family:var(--font-data);font-weight:500;overflow-wrap:anywhere}
+.k{font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:6px;padding:2px 6px;background:var(--track);color:var(--muted)}
+.brand{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:4px 8px;font-size:.85rem;overflow-wrap:anywhere}
+.chip small{color:var(--muted);font-size:.72rem;margin-left:4px}
+.none{color:var(--warn-ink);background:var(--warn-bg);border-radius:8px;padding:8px 10px;font-size:.88rem}
+.cnt{font-weight:700}
+.ok{color:var(--ok-ink)}
+
+.wrap>*{min-width:0}
+.pick{display:flex;flex-wrap:wrap;gap:8px}
+.pick label{display:flex;gap:6px;align-items:center;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 10px;font-size:.88rem;cursor:pointer}
+.pick input{accent-color:var(--a);width:1rem;height:1rem}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:max-content;font-size:.92rem}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+thead th{background:var(--track);font-size:.95rem;position:sticky;top:0}
+th.rl,td.rl{position:sticky;left:0;background:var(--surface);color:var(--muted);font-weight:600;font-size:.8rem;min-width:9.5rem;z-index:1}
+thead th.rl{background:var(--track);z-index:2}
+td.best{background:rgba(23,112,58,.12);font-weight:700}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) td.best{background:rgba(111,211,154,.16)}}
+td.diff{font-weight:600}
+.yes{color:var(--ok-ink);font-weight:600}.no{color:var(--muted)}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.grid label{display:grid;gap:4px;font-size:.8rem;color:var(--muted);font-weight:600;min-width:0}
+.grid .full{grid-column:1/-1}
+input[type=text],input[type=number],select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;color:var(--ink);font:inherit;font-size:16px;min-width:0}
+details summary{cursor:pointer;font-weight:700;color:var(--a-ink)}
+button.del{border:0;background:none;color:var(--muted);padding:0 4px;font-size:1rem}
+@media (max-width:30rem){.grid{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <a class="back" href="index.html">&larr; All tools</a>
+    <h1>Machine Compare</h1>
+    <p class="sub">Put machines side by side on speed, duplex, paper, duty cycle and more. The best value in each row is highlighted.</p>
+  </div>
+  <section class="card" aria-label="Choose machines">
+    <h2>Machines to compare</h2>
+    <div class="pick" id="pick"></div>
+    <div class="hint" id="pickmsg">Tick up to 4 machines.</div>
+  </section>
+  <div id="out"></div>
+  <section class="card" aria-label="Add a machine">
+    <details id="adddet"><summary>Add a machine</summary>
+      <div class="grid" style="margin-top:12px">
+        <label>Brand<input type="text" id="f_brand" autocomplete="off"></label>
+        <label>Model<input type="text" id="f_model" autocomplete="off"></label>
+        <label>Print technology<select id="f_tech"><option>Inkjet</option><option>Laser</option><option>LED</option></select></label>
+        <label>Print resolution<input type="text" id="f_res" placeholder="1200 × 1200" autocomplete="off"></label>
+        <label>Black print speed (ppm)<input type="number" id="f_bw" inputmode="decimal" min="0"></label>
+        <label>Colour print speed (ppm)<input type="number" id="f_col" inputmode="decimal" min="0"></label>
+        <label>Automatic duplex printing<select id="f_dp"><option value="1">Yes</option><option value="0">No</option></select></label>
+        <label>Automatic duplex scanning<select id="f_ds"><option value="1">Yes</option><option value="0" selected>No</option></select></label>
+        <label>Document feeder (sheets)<input type="number" id="f_feed" inputmode="numeric" min="0"></label>
+        <label>Paper capacity (sheets)<input type="number" id="f_paper" inputmode="numeric" min="0"></label>
+        <label>Monthly duty cycle (pages)<input type="number" id="f_duty" inputmode="numeric" min="0"></label>
+        <label>Touchscreen (inches)<input type="number" id="f_touch" inputmode="decimal" min="0" step="0.01"></label>
+        <label>Recommended monthly volume, from<input type="number" id="f_v1" inputmode="numeric" min="0"></label>
+        <label>Recommended monthly volume, to<input type="number" id="f_v2" inputmode="numeric" min="0"></label>
+        <label class="full">Network<input type="text" id="f_net" placeholder="Wi-Fi, Ethernet" autocomplete="off"></label>
+      </div>
+      <div class="actions" style="margin-top:12px"><button class="primary" id="addbtn" type="button">Add machine</button></div>
+      <div class="hint" id="addmsg">Machines you add here are saved in this browser only. To add one for everyone, send the spec sheet and it goes into the shared list.</div>
+    </details>
+  </section>
+</div>
+<script>
+var BASE=[
+  {id:'hp-oj-pro-8710',brand:'HP',model:'OfficeJet Pro 8710',tech:'Inkjet',bw:22,col:18,res:'1200 \u00d7 1200',dp:true,ds:true,feed:50,paper:250,duty:25000,v1:250,v2:1500,touch:2.65,net:'Wi-Fi, Ethernet'}
+];
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  var KEY='machinecompare.custom.v1', CUSTOM=[], SEL={};
+  try{ CUSTOM=JSON.parse(localStorage.getItem(KEY)||'[]')||[]; }catch(e){ CUSTOM=[]; }
+  function save(){ try{ localStorage.setItem(KEY,JSON.stringify(CUSTOM)); }catch(e){} }
+  function all(){ return BASE.concat(CUSTOM.map(function(m){m.custom=true;return m;})); }
+  function nm(m){ return (m.model.toLowerCase().indexOf(m.brand.toLowerCase())===0?m.model:m.brand+' '+m.model); }
+  var n0=new Intl.NumberFormat('en-US');
+  function num(v,u){ return v==null||v===''?'\u2014':n0.format(v)+(u?' '+u:''); }
+  var ROWS=[
+    {k:'tech',l:'Print technology',f:function(m){return m.tech||'\u2014';}},
+    {k:'bw',l:'Black print speed',f:function(m){return num(m.bw,'ppm');},v:function(m){return m.bw;},hi:1},
+    {k:'col',l:'Colour print speed',f:function(m){return num(m.col,'ppm');},v:function(m){return m.col;},hi:1},
+    {k:'res',l:'Print resolution',f:function(m){return m.res||'\u2014';}},
+    {k:'dp',l:'Automatic duplex printing',f:function(m){return yn(m.dp);},v:function(m){return m.dp?1:0;},hi:1},
+    {k:'ds',l:'Automatic duplex scanning',f:function(m){return yn(m.ds);},v:function(m){return m.ds?1:0;},hi:1},
+    {k:'feed',l:'Document feeder',f:function(m){return num(m.feed,'sheets');},v:function(m){return m.feed;},hi:1},
+    {k:'paper',l:'Paper capacity',f:function(m){return num(m.paper,'sheets');},v:function(m){return m.paper;},hi:1},
+    {k:'duty',l:'Monthly duty cycle',f:function(m){return num(m.duty);},v:function(m){return m.duty;},hi:1},
+    {k:'vol',l:'Recommended monthly volume',f:function(m){return (m.v1==null&&m.v2==null)?'\u2014':n0.format(m.v1||0)+'\u2013'+n0.format(m.v2||0);},v:function(m){return m.v2;},hi:1},
+    {k:'touch',l:'Touchscreen',f:function(m){return m.touch?m.touch+' inches':'None';},v:function(m){return m.touch||0;},hi:1},
+    {k:'net',l:'Network',f:function(m){return m.net||'\u2014';}}
+  ];
+  function yn(b){ return b?'<span class="yes">Yes</span>':'<span class="no">No</span>'; }
+  function renderPick(){
+    var ms=all(), h='';
+    ms.forEach(function(m){
+      h+='<label><input type="checkbox" data-id="'+esc(m.id)+'"'+(SEL[m.id]?' checked':'')+'> '+esc(nm(m))+(m.custom?' <button class="del" type="button" data-del="'+esc(m.id)+'" aria-label="Remove '+esc(nm(m))+'" title="Remove">&times;</button>':'')+'</label>';
+    });
+    $('pick').innerHTML=h;
+  }
+  function renderTable(){
+    var ms=all().filter(function(m){return SEL[m.id];}), out=$('out');
+    if(!ms.length){ out.innerHTML='<section class="card"><div class="hint">Tick a machine above to see its specs.</div></section>'; return; }
+    var h='<div class="tw"><table><thead><tr><th class="rl">Spec</th>'+ms.map(function(m){return '<th>'+esc(nm(m))+'</th>';}).join('')+'</tr></thead><tbody>';
+    ROWS.forEach(function(r){
+      var best=null;
+      if(ms.length>1&&r.v){
+        var vals=ms.map(function(m){var x=r.v(m);return x==null?-1:x;}), mx=Math.max.apply(null,vals), mn=Math.min.apply(null,vals);
+        if(mx!==mn) best=mx;
+      }
+      h+='<tr><td class="rl">'+r.l+'</td>'+ms.map(function(m){
+        var cls=''; if(best!==null){ var x=r.v(m); if((x==null?-1:x)===best) cls=' class="best"'; }
+        return '<td'+cls+'>'+r.f(m)+'</td>';
+      }).join('')+'</tr>';
+    });
+    h+='</tbody></table></div>';
+    if(ms.length>1) h+='<div class="hint" style="margin-top:8px">Highlighted = highest value in the row. Rows with no highlight are equal or not comparable.</div>';
+    out.innerHTML=h;
+  }
+  function render(){ renderPick(); renderTable(); }
+  $('pick').addEventListener('change',function(e){
+    var cb=e.target; if(!cb.getAttribute||!cb.getAttribute('data-id')) return;
+    var id=cb.getAttribute('data-id');
+    if(cb.checked){ if(Object.keys(SEL).filter(function(k){return SEL[k];}).length>=4){ cb.checked=false; $('pickmsg').textContent='Up to 4 machines at a time. Untick one first.'; return; } SEL[id]=1; }
+    else delete SEL[id];
+    $('pickmsg').textContent='Tick up to 4 machines.'; renderTable();
+  });
+  $('pick').addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('button[data-del]'); if(!b) return;
+    e.preventDefault(); var id=b.getAttribute('data-del');
+    CUSTOM=CUSTOM.filter(function(m){return m.id!==id;}); delete SEL[id]; save(); render();
+  });
+  function nv(id){ var v=$(id).value.trim(); return v===''?null:+v; }
+  $('addbtn').addEventListener('click',function(){
+    var brand=$('f_brand').value.trim(), model=$('f_model').value.trim();
+    if(!brand||!model){ $('addmsg').textContent='Enter a brand and a model.'; return; }
+    var m={id:'c'+Date.now(),brand:brand,model:model,tech:$('f_tech').value,res:$('f_res').value.trim(),bw:nv('f_bw'),col:nv('f_col'),dp:$('f_dp').value==='1',ds:$('f_ds').value==='1',feed:nv('f_feed'),paper:nv('f_paper'),duty:nv('f_duty'),touch:nv('f_touch'),v1:nv('f_v1'),v2:nv('f_v2'),net:$('f_net').value.trim()};
+    CUSTOM.push(m); save(); 
+    if(Object.keys(SEL).filter(function(k){return SEL[k];}).length<4) SEL[m.id]=1;
+    ['f_brand','f_model','f_res','f_bw','f_col','f_feed','f_paper','f_duty','f_touch','f_v1','f_v2','f_net'].forEach(function(i){$(i).value='';});
+    $('addmsg').textContent=nm(m)+' added.'; render();
+  });
+  SEL[BASE[0].id]=1; render();
+})();
+</script>
+</body>
+</html>

@@ -129,6 +129,8 @@ a.back{color:var(--a-ink);font-size:.85rem;text-decoration:none}
 .btns button,.btns a{font-size:.82rem;padding:7px 10px}
 a.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;font-weight:600;text-decoration:none;color:var(--ink)}
 button.dng{color:var(--danger)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button[aria-pressed=true]{background:var(--a);color:var(--on-a);border-color:var(--a)}
 .tags{display:flex;gap:6px;flex-wrap:wrap}
 .tags .tag{margin-left:0;background:var(--track);color:var(--muted)}
 </style>
@@ -138,7 +140,7 @@ button.dng{color:var(--danger)}
   <div>
     <a class="back" href="index.html">&larr; All tools</a>
     <h1 style="margin-top:6px">Customers</h1>
-    <p class="sub">Your saved customers. A customer saved from a quote shows up here too.</p>
+    <p class="sub">Your saved customers, split into Quoted and Buying. A customer saved from a quote starts as Quoted.</p>
   </div>
   <section class="card" id="formcard" aria-label="Customer details">
     <h2 id="ftitle">Add a customer</h2>
@@ -147,6 +149,7 @@ button.dng{color:var(--danger)}
       <label>Contact person<input type="text" id="f_person" maxlength="120" autocomplete="off"></label>
       <label>Phone<input type="text" id="f_phone" maxlength="120" inputmode="tel" autocomplete="off"></label>
       <label class="full">Email<input type="text" id="f_email" maxlength="120" inputmode="email" autocomplete="off"></label>
+      <label class="full">Status<select id="f_status"><option value="quoted">Quoted (not buying yet)</option><option value="buying">Buying customer</option></select></label>
       <label class="full">Address<input type="text" id="f_addr" maxlength="300" autocomplete="off"></label>
       <label class="full">Notes<textarea id="f_notes" maxlength="4000" style="min-height:5rem;font-family:var(--font-display);font-size:1rem" placeholder="Delivery, contract, anything to remember"></textarea></label>
     </div>
@@ -154,6 +157,7 @@ button.dng{color:var(--danger)}
     <div class="hint" id="fmsg" role="status">Saved to your login, so only you see your customers.</div>
   </section>
   <section class="card" aria-label="Customer list">
+    <div class="seg" id="seg" role="group" aria-label="Filter by status"><button type="button" data-s="all" aria-pressed="true">All</button><button type="button" data-s="quoted" aria-pressed="false">Quoted</button><button type="button" data-s="buying" aria-pressed="false">Buying</button></div>
     <label>Search customers<input type="search" id="q" placeholder="Name, contact, phone or email" autocomplete="off"></label>
     <div class="hint" id="count"></div>
   </section>
@@ -163,7 +167,8 @@ button.dng{color:var(--danger)}
 (function(){
   var $=function(id){return document.getElementById(id);};
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
-  var CL={}, EDIT='', LOADED=false;
+  var CL={}, EDIT='', LOADED=false, FILT='all';
+  function st(c){ return c.status==='buying'?'buying':'quoted'; }
   function api(method,path,body){ return fetch('/api/clients'+(path||''),{method:method,headers:{'content-type':'application/json',accept:'application/json'},body:body?JSON.stringify(body):undefined}).then(function(r){ if(!r.ok) throw 0; return r.json(); }); }
   function msg(t){ $('fmsg').textContent=t; }
   function newId(){ return 'c'+Date.now().toString(36)+Math.floor(Math.random()*1296).toString(36); }
@@ -171,7 +176,9 @@ button.dng{color:var(--danger)}
   function render(){
     var q=$('q').value.trim().toLowerCase();
     var ids=Object.keys(CL).sort(function(a,b){ return CL[a].name.toLowerCase()<CL[b].name.toLowerCase()?-1:1; });
-    var shown=ids.filter(function(id){ var c=CL[id], ct=c.contact||{}; if(!q) return true; return [c.name,ct.person,ct.phone,ct.email,ct.address,c.notes].join(' ').toLowerCase().indexOf(q)>=0; });
+    var cnt={all:ids.length,quoted:0,buying:0}; ids.forEach(function(id){ cnt[st(CL[id])]++; });
+    Array.prototype.forEach.call($('seg').children,function(b){ var k=b.getAttribute('data-s'); b.setAttribute('aria-pressed',k===FILT?'true':'false'); b.textContent=(k==='all'?'All':k==='quoted'?'Quoted':'Buying')+' ('+cnt[k]+')'; });
+    var shown=ids.filter(function(id){ var c=CL[id], ct=c.contact||{}; if(FILT!=='all'&&st(c)!==FILT) return false; if(!q) return true; return [c.name,ct.person,ct.phone,ct.email,ct.address,c.notes].join(' ').toLowerCase().indexOf(q)>=0; });
     $('count').textContent=!LOADED?'Loading...':(ids.length+' customer'+(ids.length===1?'':'s')+(q?' · '+shown.length+' match':''));
     if(!shown.length){ $('list').innerHTML='<div class="card empty">'+(LOADED?(ids.length?'No customers match that search.':'No customers yet. Add one above, or save a quote to a client.'):'Loading...')+'</div>'; return; }
     $('list').innerHTML=shown.map(function(id){
@@ -181,16 +188,16 @@ button.dng{color:var(--danger)}
       if(ct.email) h+='<div class="ln"><a href="mailto:'+esc(ct.email)+'">'+esc(ct.email)+'</a></div>';
       if(ct.address) h+='<div class="ln">'+esc(ct.address)+'</div>';
       if(c.notes) h+='<div class="nt">'+esc(c.notes)+'</div>';
-      var tg=''; if(c.quote) tg+='<span class="tag">Quote saved</span>'; if(c.margin) tg+='<span class="tag">Margin quote saved</span>';
+      var tg='<span class="tag" style="background:'+(st(c)==='buying'?'var(--ok-ink);color:var(--bg)':'var(--warn-bg);color:var(--warn-ink)')+'">'+(st(c)==='buying'?'Buying':'Quoted')+'</span>'; if(c.quote) tg+='<span class="tag">Quote saved</span>'; if(c.margin) tg+='<span class="tag">Margin quote saved</span>';
       var n=plines(c); if(n) tg+='<span class="tag">'+n+' printer'+(n===1?'':'s')+'</span>';
       if(tg) h+='<div class="tags">'+tg+'</div>';
-      h+='<div class="btns"><button type="button" data-a="edit">Edit</button><button type="button" data-a="quote">Open quote</button><button type="button" data-a="margin">Open margin quote</button><a class="btn" href="supplies.html">Supplies</a><button type="button" class="dng" data-a="del">Delete</button></div></article>';
+      h+='<div class="btns"><button type="button" data-a="edit">Edit</button><button type="button" data-a="status">'+(st(c)==='buying'?'Move to quoted':'Mark as buying')+'</button><button type="button" data-a="quote">Open quote</button><button type="button" data-a="margin">Open margin quote</button><a class="btn" href="supplies.html">Supplies</a><button type="button" class="dng" data-a="del">Delete</button></div></article>';
       return h;
     }).join('');
   }
   function fillForm(id){
     EDIT=id||''; var c=id?CL[id]:null, ct=(c&&c.contact)||{};
-    $('f_name').value=c?c.name:''; $('f_person').value=ct.person||''; $('f_phone').value=ct.phone||''; $('f_email').value=ct.email||''; $('f_addr').value=ct.address||''; $('f_notes').value=(c&&c.notes)||'';
+    $('f_name').value=c?c.name:''; $('f_person').value=ct.person||''; $('f_phone').value=ct.phone||''; $('f_email').value=ct.email||''; $('f_addr').value=ct.address||''; $('f_notes').value=(c&&c.notes)||''; $('f_status').value=c?st(c):'quoted';
     $('ftitle').textContent=c?'Edit customer':'Add a customer'; $('fcancel').hidden=!c; $('fsave').textContent=c?'Save changes':'Save customer';
   }
   $('fsave').addEventListener('click',function(){
@@ -200,17 +207,23 @@ button.dng{color:var(--danger)}
     var isNew=!id; if(!id) id=newId();
     var contact={person:$('f_person').value,phone:$('f_phone').value,email:$('f_email').value,address:$('f_addr').value}, notes=$('f_notes').value;
     msg('Saving...');
-    api('PUT','',{id:id,name:name,notes:notes,contact:contact}).then(function(){
-      var rec=CL[id]||{}; rec.name=name; rec.notes=notes; rec.contact={}; Object.keys(contact).forEach(function(k){ if(contact[k].trim()) rec.contact[k]=contact[k].trim(); }); CL[id]=rec;
+    var status=$('f_status').value;
+    api('PUT','',{id:id,name:name,notes:notes,contact:contact,status:status}).then(function(){
+      var rec=CL[id]||{}; rec.name=name; rec.notes=notes; rec.status=status; rec.contact={}; Object.keys(contact).forEach(function(k){ if(contact[k].trim()) rec.contact[k]=contact[k].trim(); }); CL[id]=rec;
       msg((isNew?'Customer saved: ':'Updated ')+name+'.'); fillForm(''); render();
     }).catch(function(){ msg('Could not save. Check your connection and try again.'); });
   });
   $('fcancel').addEventListener('click',function(){ fillForm(''); msg('Edit cancelled.'); });
   $('q').addEventListener('input',render);
+  $('seg').addEventListener('click',function(e){ var b=e.target.closest('button[data-s]'); if(!b) return; FILT=b.getAttribute('data-s'); render(); });
   $('list').addEventListener('click',function(e){
     var b=e.target.closest('button[data-a]'); if(!b) return;
     var id=b.closest('[data-id]').getAttribute('data-id'), a=b.getAttribute('data-a'), c=CL[id];
-    if(a==='edit'){ fillForm(id); msg('Editing '+c.name+'.'); window.scrollTo({top:0,behavior:'smooth'}); }
+    if(a==='status'){
+      var ns=st(c)==='buying'?'quoted':'buying';
+      api('PUT','',{id:id,name:c.name,status:ns}).then(function(){ c.status=ns; render(); msg(c.name+' moved to '+(ns==='buying'?'Buying':'Quoted')+'.'); }).catch(function(){ msg('Could not update. Try again.'); });
+    }
+    else if(a==='edit'){ fillForm(id); msg('Editing '+c.name+'.'); window.scrollTo({top:0,behavior:'smooth'}); }
     else if(a==='quote'||a==='margin'){ try{ localStorage.setItem('printer-client-'+a,id); localStorage.setItem('printer-client-open',a+':'+id); }catch(x){} location.href=(a==='quote'?'quote.html':'quote-margin.html'); }
     else if(a==='del'){
       if(!confirm('Delete '+c.name+' and any quotes saved to them?')) return;

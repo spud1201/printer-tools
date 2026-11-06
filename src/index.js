@@ -82,6 +82,7 @@ export default {
         rec.name = name;
         rec.updated = Date.now();
         if (typeof body.notes === 'string') rec.notes = body.notes.slice(0, 4000);
+        if (body.status === 'quoted' || body.status === 'buying') rec.status = body.status;
         if (body.contact && typeof body.contact === 'object') {
           const c = {};
           for (const f of ['person', 'phone', 'email', 'address']) {

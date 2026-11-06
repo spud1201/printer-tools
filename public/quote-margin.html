@@ -29,6 +29,12 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-displ
   padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .wrap{max-width:46rem;margin:0 auto;display:grid;gap:14px}
 h1{margin:0;font-size:1.5rem;line-height:1.1;font-weight:800;font-stretch:112%;letter-spacing:-.01em}
+h2.coll{width:100%}
+h2.coll button{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:8px;cursor:pointer;min-height:24px}
+h2.coll button:focus-visible{outline:2px solid var(--a);outline-offset:3px;border-radius:4px}
+h2.coll .qdsum{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:none;letter-spacing:0;font-weight:500;font-size:.85rem;color:var(--ink)}
+h2.coll .chev{margin-left:auto;transition:transform .15s}
+h2.coll button[aria-expanded=false] .chev{transform:rotate(-90deg)}
 h2{margin:0;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .sub{margin:.35rem 0 0;color:var(--muted)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:12px;min-width:0}
@@ -129,8 +135,8 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
   </section>
 
   <section class="card" aria-label="Quote details">
-    <h2>Quote details</h2>
-    <div class="grid">
+    <h2 class="coll"><button type="button" id="qdtoggle" aria-expanded="true" aria-controls="qdbody"><span>Quote details</span><span class="qdsum" id="qdsum"></span><span class="chev" aria-hidden="true">&#9662;</span></button></h2>
+    <div class="grid" id="qdbody">
       <label>Customer<input id="cust" type="text" autocomplete="off" placeholder="Company or contact"></label>
       <label>Quote number<input id="qno" type="text" autocomplete="off"></label>
       <label>Date<input id="qdate" type="date"></label>
@@ -671,6 +677,18 @@ var DATA = [{"b": "Brother", "m": "HL-L2405W", "t": "Mono laser printer", "p": n
     render();
   }
   init();
+})();
+</script>
+<script>
+(function(){
+  var b=document.getElementById('qdtoggle'), body=document.getElementById('qdbody'), sum=document.getElementById('qdsum');
+  function val(id){ var e=document.getElementById(id); return e?e.value.trim():''; }
+  function upd(){ var t=[val('cust'),val('qno')].filter(Boolean).join(' · '); sum.textContent=body.hidden?(t||'(empty)'):''; }
+  function set(open){ body.hidden=!open; b.setAttribute('aria-expanded',open?'true':'false'); try{ localStorage.setItem('qd-open',open?'1':'0'); }catch(e){} upd(); }
+  b.addEventListener('click',function(){ set(body.hidden); });
+  ['cust','qno'].forEach(function(id){ var e=document.getElementById(id); if(e){ e.addEventListener('input',upd); e.addEventListener('change',upd); } });
+  var open=true; try{ open=localStorage.getItem('qd-open')!=='0'; }catch(e){}
+  set(open); setInterval(upd,1000);
 })();
 </script>
 </body>

@@ -198,6 +198,7 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
     <div class="impbox" style="margin:10px 0;padding:12px;border:1px dashed var(--line);border-radius:10px">
       <b>Import a price list</b>
       <div class="hint">Upload an Excel (.xlsx, .xls) or .csv file with a part number column and a price column (headers such as Part Number and Price work best). Matching toner and drum numbers get your price on every quote.</div>
+      <label class="hint" for="impkind" style="display:block;margin-top:6px">These prices are for: <select id="impkind"><option value="oem">Original (OEM) parts</option><option value="compat">Compatible parts</option></select></label>
       <input id="impfile" type="file" accept=".xlsx,.xls,.csv" hidden>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button id="impbtn" type="button">Choose price list</button><button id="impapply" type="button" hidden>Apply prices</button><button id="impclear" type="button">Remove all saved prices</button></div>
       <div class="hint" id="impprev" role="status"></div>
@@ -334,16 +335,16 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     return out;
   }
   function planImport(items){
-    var map=buildPMap(), bulk={}, hit=0, miss=[];
+    var map=buildPMap(), bulk={}, hit=0, miss=[], CMP=$('impkind')&&$('impkind').value==='compat';
     items.forEach(function(it){
       var k=nrm(it.part), m=map[k];
-      if(m){ hit++; Object.keys(m).forEach(function(t){ bulk[t]=it.price; }); } else miss.push(it.part);
+      if(m){ hit++; Object.keys(m).forEach(function(t){ bulk[(CMP?'compat ':'')+t]=it.price; }); } else miss.push(it.part);
     });
     return {bulk:bulk, hit:hit, miss:miss, total:items.length};
   }
   function applySavedToLines(){
     S.lines.forEach(function(l){ var p=DATA[l.key];
-      l.toners.forEach(function(sp){ var k=partKey(p.c,sp); if(k&&SAVED[k]!=null&&sp.opt>=0&&!p.c[sp.opt].ph) sp.price=SAVED[k]; });
+      l.toners.forEach(function(sp){ var k=partKey(p.c,sp); if(k&&SAVED[k]!=null&&sp.opt>=0) sp.price=SAVED[k]; });
       var kd=partKey(p.d,l.drum); if(kd&&SAVED[kd]!=null&&l.drum.opt>=0) l.drum.price=SAVED[kd];
     });
     save(); render();

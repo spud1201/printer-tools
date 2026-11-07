@@ -169,7 +169,9 @@ var BASE=[
   {id:'epson-wf-c5790',brand:'Epson',model:'WorkForce Pro WF-C5790',tech:'Inkjet',bw:24,col:24,res:'4800 \u00d7 1200',dp:true,ds:true,feed:50,paper:250,duty:45000,v1:0,v2:2500,touch:4.3,net:'Gigabit Ethernet, Wi-Fi, Wi-Fi Direct'},
   {id:'epson-wf-c5890',brand:'Epson',model:'WorkForce Pro WF-C5890',tech:'Inkjet',bw:25,col:25,res:null,dp:true,ds:true,feed:50,paper:null,duty:null,v1:0,v2:5000,touch:4.3,net:'Ethernet, Wi-Fi'},
   {id:'lexmark-mb3442adw',brand:'Lexmark',model:'MB3442adw',tech:'Laser',bw:42,col:null,res:'2400 IQ (600 \u00d7 600)',dp:true,ds:true,feed:50,paper:350,duty:80000,v1:800,v2:8000,touch:2.8,net:'Ethernet, Wi-Fi'},
-  {id:'canon-imageclass-mf455dw',brand:'Canon',model:'imageCLASS MF455dw',tech:'Laser',bw:40,col:null,res:'600 \u00d7 600',dp:true,ds:true,feed:null,paper:350,duty:null,v1:null,v2:null,touch:5,net:'Gigabit Ethernet, Wi-Fi'}
+  {id:'canon-imageclass-mf455dw',brand:'Canon',model:'imageCLASS MF455dw',tech:'Laser',bw:40,col:null,res:'600 \u00d7 600',dp:true,ds:true,feed:null,paper:350,duty:null,v1:null,v2:null,touch:5,net:'Gigabit Ethernet, Wi-Fi'},
+  {id:'xerox-c325',brand:'Xerox',model:'C325',tech:'Laser',bw:35,col:35,res:'1200 \u00d7 1200',dp:true,ds:null,feed:null,paper:250,duty:65000,v1:0,v2:6000,touch:-1,net:'Gigabit Ethernet, Wi-Fi'},
+  {id:'lexmark-mc3426adw',brand:'Lexmark',model:'MC3426adw',tech:'Laser',bw:26,col:26,res:'2400 \u00d7 600 (4800 CQ)',dp:true,ds:true,feed:50,paper:250,duty:75000,v1:750,v2:5000,touch:2.8,net:'Gigabit Ethernet, Wi-Fi'}
 ];
 (function(){
   var $=function(id){return document.getElementById(id);};
@@ -192,7 +194,7 @@ var BASE=[
     {k:'paper',l:'Paper capacity',f:function(m){return num(m.paper,'sheets');},v:function(m){return m.paper;},hi:1},
     {k:'duty',l:'Monthly duty cycle',f:function(m){return num(m.duty);},v:function(m){return m.duty;},hi:1},
     {k:'vol',l:'Recommended monthly volume',f:function(m){return (m.v1==null&&m.v2==null)?'\u2014':n0.format(m.v1||0)+'\u2013'+n0.format(m.v2||0);},v:function(m){return m.v2;},hi:1},
-    {k:'touch',l:'Touchscreen',f:function(m){return m.touch?m.touch+' inches':'None';},v:function(m){return m.touch||0;},hi:1},
+    {k:'touch',l:'Touchscreen',f:function(m){return m.touch<0?'\u2014':m.touch?m.touch+' inches':'None';},v:function(m){return Math.max(m.touch||0,0);},hi:1},
     {k:'net',l:'Network',f:function(m){return m.net||'\u2014';}}
   ];
   function yn(b){ if(b==null) return '\u2014'; return b?'<span class="yes">Yes</span>':'<span class="no">No</span>'; }

@@ -133,6 +133,11 @@ button.dng{color:var(--danger)}
 .seg button[aria-pressed=true]{background:var(--a);color:var(--on-a);border-color:var(--a)}
 .tags{display:flex;gap:6px;flex-wrap:wrap}
 .tags .tag{margin-left:0;background:var(--track);color:var(--muted)}
+h2.coll{width:100%}
+h2.coll button{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:8px;cursor:pointer;min-height:24px}
+h2.coll button:focus-visible{outline:2px solid var(--a,#1f6feb);outline-offset:3px;border-radius:4px}
+h2.coll .chev{margin-left:auto;transition:transform .15s}
+h2.coll button[aria-expanded=false] .chev{transform:rotate(-90deg)}
 </style>
 </head>
 <body>
@@ -143,7 +148,8 @@ button.dng{color:var(--danger)}
     <p class="sub">Your saved customers, split into Quoted and Buying. A customer saved from a quote starts as Quoted.</p>
   </div>
   <section class="card" id="formcard" aria-label="Customer details">
-    <h2 id="ftitle">Add a customer</h2>
+    <h2 class="coll"><button type="button" id="ftoggle" aria-expanded="true" aria-controls="fbody"><span id="ftitle">Add a customer</span><span class="chev" aria-hidden="true">&#9662;</span></button></h2>
+    <div id="fbody">
     <div class="grid">
       <label class="full">Company or customer name<input type="text" id="f_name" maxlength="80" autocomplete="off"></label>
       <label>Contact person<input type="text" id="f_person" maxlength="120" autocomplete="off"></label>
@@ -155,6 +161,7 @@ button.dng{color:var(--danger)}
     </div>
     <div class="actions"><button class="primary" id="fsave" type="button">Save customer</button><button id="fcancel" type="button" hidden>Cancel edit</button></div>
     <div class="hint" id="fmsg" role="status">Saved to your login, so only you see your customers.</div>
+    </div>
   </section>
   <section class="card" aria-label="Customer list">
     <div class="seg" id="seg" role="group" aria-label="Filter by status"><button type="button" data-s="all" aria-pressed="true">All</button><button type="button" data-s="quoted" aria-pressed="false">Quoted</button><button type="button" data-s="buying" aria-pressed="false">Buying</button></div>
@@ -198,7 +205,7 @@ button.dng{color:var(--danger)}
   function fillForm(id){
     EDIT=id||''; var c=id?CL[id]:null, ct=(c&&c.contact)||{};
     $('f_name').value=c?c.name:''; $('f_person').value=ct.person||''; $('f_phone').value=ct.phone||''; $('f_email').value=ct.email||''; $('f_addr').value=ct.address||''; $('f_notes').value=(c&&c.notes)||''; $('f_status').value=c?st(c):'quoted';
-    $('ftitle').textContent=c?'Edit customer':'Add a customer'; $('fcancel').hidden=!c; $('fsave').textContent=c?'Save changes':'Save customer';
+    $('ftitle').textContent=c?'Edit customer':'Add a customer'; if(c&&window.setFormOpen) window.setFormOpen(true); $('fcancel').hidden=!c; $('fsave').textContent=c?'Save changes':'Save customer';
   }
   $('fsave').addEventListener('click',function(){
     var name=$('f_name').value.trim(); if(!name){ msg('Enter the customer name.'); return; }
@@ -232,6 +239,16 @@ button.dng{color:var(--danger)}
   });
   render();
   api('GET').then(function(j){ CL=j.clients||{}; LOADED=true; render(); }).catch(function(){ LOADED=true; $('count').textContent='Could not load customers. Reload the page.'; });
+})();
+</script>
+<script>
+(function(){
+  var b=document.getElementById('ftoggle'), body=document.getElementById('fbody');
+  function set(open){ body.hidden=!open; b.setAttribute('aria-expanded',open?'true':'false'); try{ localStorage.setItem('cf-open',open?'1':'0'); }catch(e){} }
+  window.setFormOpen=set;
+  b.addEventListener('click',function(){ set(body.hidden); });
+  var open=true; try{ open=localStorage.getItem('cf-open')!=='0'; }catch(e){}
+  set(open);
 })();
 </script>
 </body>

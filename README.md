@@ -10,7 +10,6 @@ Mobile-friendly tools for printer and toner sales. Static HTML, no build step. S
 - `public/compare.html` – Machine Compare (spec comparison)
 - `public/customers.html` – Customers (saved customer list with contacts and notes)
 - `public/partfinder.html` – Part Number Lookup
-- `public/toner.html` – Toner Cost Compare
 - `data/` – source spreadsheets (Canadian models, supplies, prices)
 
 Prices are CAD from brand and retailer sites, collected November 2026.

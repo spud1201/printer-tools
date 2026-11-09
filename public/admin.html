@@ -1,0 +1,22 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Approve access</title>
+<style>body{font-family:system-ui,sans-serif;margin:0;background:#f4f6f8;color:#1b2733}main{max-width:640px;margin:0 auto;padding:16px}
+section{background:#fff;border-radius:12px;padding:16px;margin:12px 0;box-shadow:0 1px 6px rgba(0,0,0,.07)}h1{font-size:20px}h2{font-size:16px;margin:0 0 8px}
+.r{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid #e6eaee;flex-wrap:wrap}.r:first-of-type{border-top:0}
+.e{word-break:break-all}button{font:inherit;padding:8px 14px;border-radius:8px;border:1px solid #0b5cad;background:#0b5cad;color:#fff;cursor:pointer}button.g{background:#fff;color:#0b5cad}
+input{font:inherit;padding:8px;border:1px solid #bbb;border-radius:8px;flex:1;min-width:200px}.m{color:#667;font-size:14px}a{color:#0b5cad}</style></head>
+<body><main><p><a href="index.html">&larr; Back to tools</a></p><h1>Approve access</h1>
+<section><h2>Waiting for approval</h2><div id="p" class="m">Loading…</div></section>
+<section><h2>Approved people</h2><div id="a" class="m">Loading…</div>
+<div class="r"><input id="n" type="email" placeholder="Add an email directly"><button id="add">Approve</button></div></section>
+<p class="m" id="msg"></p></main>
+<script>
+function $(i){return document.getElementById(i)}
+function row(e,btns){var d=document.createElement('div');d.className='r';var s=document.createElement('span');s.className='e';s.textContent=e;d.appendChild(s);var w=document.createElement('span');btns.forEach(function(b){var x=document.createElement('button');x.textContent=b[0];if(b[2])x.className='g';x.onclick=function(){act(b[1],e)};x.style.marginLeft='6px';w.appendChild(x)});d.appendChild(w);return d}
+function act(a,e){fetch('/api/admin',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:a,email:e})}).then(function(r){return r.json()}).then(function(j){$('msg').textContent=j.ok?'Saved.':(j.error||'Failed');load()}).catch(function(){$('msg').textContent='Failed'})}
+function fill(el,list,btns,none){el.textContent='';if(!list.length){el.textContent=none;return}list.forEach(function(e){el.appendChild(row(e,btns))})}
+function load(){fetch('/api/admin').then(function(r){return r.json()}).then(function(j){
+fill($('p'),j.pending||[],[['Approve','approve'],['Deny','deny',1]],'No one is waiting.');
+fill($('a'),j.approved||[],[['Remove','revoke',1]],'No one approved yet (you always have access).')}).catch(function(){$('p').textContent='Could not load'})}
+$('add').onclick=function(){var v=$('n').value.trim();if(v){act('approve',v);$('n').value=''}};
+load();
+</script></body></html>

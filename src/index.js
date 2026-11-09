@@ -52,13 +52,70 @@ function json(body, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
 }
 
+function isAdmin(email, env) {
+  return email === String(env.ADMIN_EMAIL || '').toLowerCase();
+}
+
+function esc(s) {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function pendingPage(email) {
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Access requested</title>
+<style>body{font-family:system-ui,sans-serif;margin:0;background:#f4f6f8;color:#1b2733;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:16px}
+.c{background:#fff;border-radius:12px;padding:28px;max-width:420px;box-shadow:0 2px 12px rgba(0,0,0,.08)}h1{font-size:20px;margin:0 0 12px}p{line-height:1.5;margin:8px 0}a{color:#0b5cad}</style></head>
+<body><div class="c"><h1>Access requested</h1><p>Thanks. Your request for <b>${esc(email)}</b> has been sent for approval.</p><p>Once it is approved, reload this page and you will be in. There is nothing else you need to do.</p><p><a href="/cdn-cgi/access/logout">Sign out</a></p></div></body></html>`;
+  return new Response(html, { status: 403, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const isApi = url.pathname.startsWith('/api/');
+    const email = await userEmail(request, env);
+    if (!email) return isApi ? json({ error: 'not signed in' }, 401) : new Response('Sign in required', { status: 401 });
+
+    // Approval gate: anyone can sign in with an email code, but only approved people get in.
+    const admin = isAdmin(email, env);
+    if (!admin && !(await env.PRICES.get('ok:' + email))) {
+      if (!(await env.PRICES.get('pend:' + email))) {
+        await env.PRICES.put('pend:' + email, JSON.stringify({ t: Date.now() }), { expirationTtl: 60 * 86400 });
+      }
+      if (url.pathname === '/api/me') return json({ email, approved: false, admin: false });
+      if (isApi) return json({ error: 'pending approval' }, 403);
+      const wantsHtml = (request.headers.get('accept') || '').includes('text/html');
+      return wantsHtml ? pendingPage(email) : new Response('Pending approval', { status: 403 });
+    }
+
+    if (url.pathname === '/api/me') {
+      const o = { email, approved: true, admin };
+      if (admin) o.pending = (await env.PRICES.list({ prefix: 'pend:', limit: 1000 })).keys.length;
+      return json(o);
+    }
+
+    if (url.pathname === '/api/admin') {
+      if (!admin) return json({ error: 'forbidden' }, 403);
+      if (request.method === 'GET') {
+        const names = async (p) => (await env.PRICES.list({ prefix: p, limit: 1000 })).keys.map((k) => k.name.slice(p.length)).sort();
+        return json({ pending: await names('pend:'), approved: await names('ok:') });
+      }
+      if (request.method === 'POST') {
+        let b;
+        try { b = await request.json(); } catch (e) { return json({ error: 'bad json' }, 400); }
+        const target = typeof b.email === 'string' ? b.email.trim().toLowerCase() : '';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(target) || target.length > 200) return json({ error: 'bad email' }, 400);
+        if (b.action === 'approve') { await env.PRICES.put('ok:' + target, '1'); await env.PRICES.delete('pend:' + target); return json({ ok: true }); }
+        if (b.action === 'deny') { await env.PRICES.delete('pend:' + target); return json({ ok: true }); }
+        if (b.action === 'revoke') { await env.PRICES.delete('ok:' + target); return json({ ok: true }); }
+        return json({ error: 'bad action' }, 400);
+      }
+      return json({ error: 'method not allowed' }, 405);
+    }
+
+    if (url.pathname === '/admin.html' && !admin) return new Response('Not found', { status: 404 });
+
     if (url.pathname !== '/api/prices' && url.pathname !== '/api/logo' && url.pathname !== '/api/clients') return env.ASSETS.fetch(request);
 
-    const email = await userEmail(request, env);
-    if (!email) return json({ error: 'not signed in' }, 401);
     const kvKey = 'u:' + email;
 
     if (url.pathname === '/api/clients') {

@@ -269,5 +269,8 @@ footer nav{display:flex;flex-wrap:wrap;gap:8px 20px}
     <nav aria-label="Footer"><a href="quote.html">Quote</a><a href="quote-margin.html">Margin quote</a><a href="supplies.html">Clients</a><a href="finder.html">Finder</a><a href="compare.html">Compare</a><a href="customers.html">Customers</a><a href="toner.html">Toner cost</a></nav>
   </div>
 </footer>
+<script>
+fetch('/api/me').then(function(r){return r.json()}).then(function(j){if(!j.admin)return;var a=document.createElement('a');a.href='admin.html';a.textContent='Approve access'+(j.pending?' ('+j.pending+' waiting)':'');a.style.cssText='display:block;text-align:center;margin:16px;color:#0b5cad;font:16px system-ui,sans-serif';document.body.appendChild(a)}).catch(function(){});
+</script>
 </body>
 </html>

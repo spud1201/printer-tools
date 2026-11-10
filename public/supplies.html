@@ -222,11 +222,17 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   function put(id,tool){ var c=CL[id]; return fetch('/api/clients',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({id:id,name:c.name,tool:tool,state:c[tool]})}).then(function(r){ if(!r.ok) throw 0; }); }
   function addMsg(t){ $('addmsg').textContent=t; }
   var busy=false;
-  function doAdd(){
+  function sNorm(s){ return String(s==null?'':s).toLowerCase().replace(/[^a-z0-9]/g,''); }
+    function sMatch(name,q){
+      var nn=sNorm(name), qq=sNorm(q); if(!qq) return true;
+      if(nn.indexOf(qq)>=0) return true;
+      return String(q).toLowerCase().split(/\s+/).every(function(t){ t=sNorm(t); return !t||nn.indexOf(t)>=0; });
+    }
+    function doAdd(){
     var id=$('sel').value, c=CL[id]; if(!c||busy) return;
     var v=$('pick').value.trim().toLowerCase(), hit=null;
-    DATA.forEach(function(p){ if(p.n.toLowerCase()===v) hit=p; });
-    if(!hit){ var m=DATA.filter(function(p){ return p.n.toLowerCase().indexOf(v)>=0; }); if(v&&m.length===1) hit=m[0]; else if(v&&m.length>1){ addMsg(m.length+' models match. Keep typing or choose one from the list.'); return; } }
+    var vn=sNorm(v); DATA.forEach(function(p){ if(vn&&sNorm(p.n)===vn) hit=p; });
+    if(!hit){ var m=DATA.filter(function(p){ return sMatch(p.n,v); }); if(v&&m.length===1) hit=m[0]; else if(v&&m.length>1){ addMsg(m.length+' models match. Keep typing or choose one from the list.'); return; } }
     if(!hit){ addMsg('No model found. Check the spelling or choose from the list.'); return; }
     var st=c.quote||(c.quote={cust:c.name,qno:'QT-'+today().replace(/-/g,'')+'-'+(Math.floor(Math.random()*900)+100),qdate:today(),qby:'',qco:'',tax:5,lines:[]});
     var mx=0; st.lines.forEach(function(l){ mx=Math.max(mx,l.uid||0); });
@@ -241,8 +247,8 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     inp.parentNode.insertAdjacentElement('afterend',box);
     function show(){
       var q=inp.value.trim().toLowerCase(); if(!q&&!openAll){ box.hidden=true; return; }
-      var tk=q?q.split(/\s+/):[], m=DATA.filter(function(p){ var n=p.n.toLowerCase(); return tk.every(function(t){ return n.indexOf(t)>=0; }); });
-      if(q&&m.length===1&&m[0].n.toLowerCase()===q){ box.hidden=true; return; }
+      var m=DATA.filter(function(p){ return !q||sMatch(p.n,q); });
+      if(q&&m.length===1&&sNorm(m[0].n)===sNorm(q)){ box.hidden=true; return; }
       var h=''; m.slice(0,openAll&&!q?400:60).forEach(function(p){ h+='<button type="button" role="option" data-n="'+esc(p.n)+'">'+esc(p.n)+'</button>'; });
       if(m.length>60) h+='<div class="none">Showing 60 of '+m.length+'. Keep typing to narrow it down.</div>';
       if(!m.length) h='<div class="none">No models match.</div>';
@@ -257,7 +263,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     inp.addEventListener('input',show);
     box.addEventListener('click',function(e){ var b=e.target.closest('button[data-n]'); if(!b) return; inp.value=b.getAttribute('data-n'); box.hidden=true; openAll=false; arr.setAttribute('aria-expanded','false'); doAdd(); });
   })();
-  $('pick').addEventListener('change',function(){ var v=this.value.trim().toLowerCase(); if(DATA.some(function(p){return p.n.toLowerCase()===v;})) doAdd(); });
+  $('pick').addEventListener('change',function(){ var v=this.value.trim().toLowerCase(); if(DATA.some(function(p){return sNorm(p.n)===sNorm(v);})) doAdd(); });
   $('out').addEventListener('click',function(e){
     var b=e.target.closest('button[data-rm]'); if(!b) return;
     var id=$('sel').value, c=CL[id], k=+b.getAttribute('data-rm'); if(!c) return;

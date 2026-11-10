@@ -404,12 +404,14 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   }
   function sell(c){ c=+c||0; var m=(+S.mp||0)/100; var v=(S.mm==='markup')?c*(1+m):(m<1?c/(1-m):c); return Math.round(v*100)/100; }
   function r2(x){ return Math.round(x*100)/100; }
-  function sellTxt(sp){ return (sp.price==null||sp.price==='')?'':'Sells at '+money(sell(sp.price))+' each'; }
-  function supSell(sp){ return sp.opt===-2?0:r2(sell(sp.price)*(+sp.qty||0)); }
+  function hasOv(sp){ return sp&&sp.sp!=null&&sp.sp!==''&&isFinite(+sp.sp); }
+  function unitSell(sp){ return hasOv(sp)?r2(+sp.sp):sell(sp.price); }
+  function sellTxt(sp){ if(!hasOv(sp)&&(sp.price==null||sp.price==='')) return ''; return 'Sells at '+money(unitSell(sp))+' each'+(hasOv(sp)?' (your price)':''); }
+  function supSell(sp){ return sp.opt===-2?0:r2(unitSell(sp)*(+sp.qty||0)); }
   function supTotal(sp){ return (sp.opt===-2) ? 0 : (+sp.price||0)*(+sp.qty||0); }
   function lineTotals(l){
     var pr=0, su=supTotal(l.drum), sl=supSell(l.drum); l.toners.forEach(function(x){ su+=supTotal(x); sl+=supSell(x); });
-    l.extras.forEach(function(e){ su+=(+e.price||0)*(+e.qty||0); sl+=r2(sell(e.price)*(+e.qty||0)); });
+    l.extras.forEach(function(e){ su+=(+e.price||0)*(+e.qty||0); sl+=r2(unitSell(e)*(+e.qty||0)); });
     return {pr:pr,su:su,sl:sl};
   }
   function supLabel(list,sp){
@@ -434,6 +436,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     if(sp.opt!==-2){
       var cur=(sp.opt>=0)?list[sp.opt]:null, phOn=cur&&cur.ph&&!cur.real&&+sp.price===cur.p;
       h+='<div class="row"><div><div class="need">'+((sp.price==null||sp.price==='')?'Cost needed':(phOn?'Placeholder cost. Enter the real cost.':''))+'</div><div class="sellp" data-sell="'+(kind==='toner'?'t:'+idx:'d')+'">'+sellTxt(sp)+'</div></div><label>Qty<input class="num" type="number" min="0" step="1" data-f="qty" value="'+esc(sp.qty)+'"></label><label>Unit cost<input class="num" type="number" min="0" step="0.01" data-f="price" value="'+(sp.price==null?'':esc(sp.price))+'" placeholder="0.00"></label></div>';
+      h+='<label>Selling price each (leave blank to use the margin)<input class="num" type="number" min="0" step="0.01" data-f="sp" value="'+(hasOv(sp)?esc(sp.sp):'')+'" placeholder="Auto: '+(sp.price==null||sp.price===''?'0.00':sell(sp.price).toFixed(2))+'"></label>';
       h+='<div class="savep" data-savep>'+savInner(partKey(list,sp),sp.price)+'</div>';
     }
     return h+'</div>';
@@ -447,7 +450,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     h+='<div><button class="link" type="button" data-act="addt">+ Add another toner</button></div>';
     h+=supHtml(l,'drum','Drum or imaging unit',p.d,l.drum,0);
     l.extras.forEach(function(e,i){
-      h+='<div class="sec" data-extra="'+i+'"><div class="sec-t">Other supply <button class="del" type="button" data-act="delx" aria-label="Remove supply">×</button></div><label>Description or part number<input type="text" data-x="desc" value="'+esc(e.desc)+'"></label><div class="row"><div class="sellp" data-sell="x:'+i+'">'+sellTxt(e)+'</div><label>Qty<input class="num" type="number" min="0" step="1" data-x="qty" value="'+esc(e.qty)+'"></label><label>Unit cost<input class="num" type="number" min="0" step="0.01" data-x="price" value="'+(e.price==null?'':esc(e.price))+'" placeholder="0.00"></label></div><div class="savep" data-savep>'+savInner(extraKey(e),e.price)+'</div></div>';
+      h+='<div class="sec" data-extra="'+i+'"><div class="sec-t">Other supply <button class="del" type="button" data-act="delx" aria-label="Remove supply">×</button></div><label>Description or part number<input type="text" data-x="desc" value="'+esc(e.desc)+'"></label><div class="row"><div class="sellp" data-sell="x:'+i+'">'+sellTxt(e)+'</div><label>Qty<input class="num" type="number" min="0" step="1" data-x="qty" value="'+esc(e.qty)+'"></label><label>Unit cost<input class="num" type="number" min="0" step="0.01" data-x="price" value="'+(e.price==null?'':esc(e.price))+'" placeholder="0.00"></label></div><label>Selling price each (leave blank to use the margin)<input class="num" type="number" min="0" step="0.01" data-x="sp" value="'+(hasOv(e)?esc(e.sp):'')+'" placeholder="Auto"></label><div class="savep" data-savep>'+savInner(extraKey(e),e.price)+'</div></div>';
     });
     h+='<div><button class="link" type="button" data-act="addx">+ Add another supply (for colour sets, extra bottles, paper)</button></div>';
     if(p.s) h+='<details><summary>Parts on file</summary><p>'+esc(p.s)+'</p></details>';
@@ -480,6 +483,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       var el=card.querySelector('[data-lt]'); if(el) el.textContent=ltxt(tt);
       var ce=card.querySelector('[data-cpp]'); if(ce) ce.textContent=cppMg(l,DATA[l.key]);
       function put(ref,txt){ var e=card.querySelector('[data-sell="'+ref+'"]'); if(e) e.textContent=txt; }
+      card.querySelectorAll('[data-kind]').forEach(function(sec){ var sq=getSp(l,sec), inp=sec.querySelector('input[data-f="sp"]'); if(inp&&sq) inp.placeholder='Auto: '+(sq.price==null||sq.price===''?'0.00':sell(sq.price).toFixed(2)); });
       l.toners.forEach(function(sp,i){ put('t:'+i,sellTxt(sp)); }); put('d',sellTxt(l.drum)); l.extras.forEach(function(x,i){ put('x:'+i,sellTxt(x)); });
     });
     var sub=sl, tax=sub*((+S.tax||0)/100), profit=sub-cost;
@@ -499,9 +503,9 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       h+='<tr class="pr"><td>'+esc(p.n)+'</td><td class="n">'+esc(l.qty)+'</td><td class="n"></td><td class="n"></td></tr>';
       supRows(l,p).forEach(function(a){
         var sp=a[1], lb=supLabel(a[2],sp); if(!lb) return;
-        h+='<tr class="sub"><td>'+a[0]+': '+esc(lb)+'</td><td class="n">'+esc(sp.qty)+'</td><td class="n">'+(sp.price==null||sp.price===''?'':money(sell(sp.price)))+'</td><td class="n">'+money(supSell(sp))+'</td></tr>';
+        h+='<tr class="sub"><td>'+a[0]+': '+esc(lb)+'</td><td class="n">'+esc(sp.qty)+'</td><td class="n">'+(sp.price==null||sp.price===''?'':money(unitSell(sp)))+'</td><td class="n">'+money(supSell(sp))+'</td></tr>';
       });
-      l.extras.forEach(function(e){ if(e.desc||e.price) h+='<tr class="sub"><td>'+esc(e.desc||'Supply')+'</td><td class="n">'+esc(e.qty)+'</td><td class="n">'+(e.price==null||e.price===''?'':money(sell(e.price)))+'</td><td class="n">'+money(r2(sell(e.price)*(+e.qty||0)))+'</td></tr>'; });
+      l.extras.forEach(function(e){ if(e.desc||e.price) h+='<tr class="sub"><td>'+esc(e.desc||'Supply')+'</td><td class="n">'+esc(e.qty)+'</td><td class="n">'+(e.price==null||e.price===''?'':money(unitSell(e)))+'</td><td class="n">'+money(r2(unitSell(e)*(+e.qty||0)))+'</td></tr>'; });
     });
     h+='</tbody></table><div class="totals"><div><span>Subtotal</span><span>'+money(sub)+'</span></div><div><span>Tax ('+(+S.tax||0)+'%)</span><span>'+money(tax)+'</span></div><div class="gt"><span>Total</span><span>'+money(sub+tax)+'</span></div></div>';
     h+='<p class="fine">Prices in Canadian dollars.</p></div>';
@@ -519,9 +523,9 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       o.push((ix+1)+'. '+p.n+'  x '+l.qty);
       supRows(l,p).forEach(function(a){
         var sp=a[1], lb=supLabel(a[2],sp);
-        if(lb) o.push('   '+a[0]+': '+lb+'  '+sp.qty+' x '+(sp.price==null||sp.price===''?'(price needed)':money(sell(sp.price)))+' = '+money(supSell(sp)));
+        if(lb) o.push('   '+a[0]+': '+lb+'  '+sp.qty+' x '+(sp.price==null||sp.price===''?'(price needed)':money(unitSell(sp)))+' = '+money(supSell(sp)));
       });
-      l.extras.forEach(function(e){ if(e.desc||e.price) o.push('   Supply: '+(e.desc||'')+'  '+e.qty+' x '+money(sell(e.price))+' = '+money(r2(sell(e.price)*(+e.qty||0)))); });
+      l.extras.forEach(function(e){ if(e.desc||e.price) o.push('   Supply: '+(e.desc||'')+'  '+e.qty+' x '+money(unitSell(e))+' = '+money(r2(unitSell(e)*(+e.qty||0)))); });
     });
     o.push('');
     o.push('Subtotal: '+money(sub));
@@ -542,8 +546,8 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     var el=e.target; if(el.tagName!=='SELECT') return;
     var l=findLine(el), sec=el.closest('[data-kind]'); if(!l||!sec) return;
     var kind=sec.getAttribute('data-kind'), sp=getSp(l,sec), p=DATA[l.key], list=kind==='toner'?p.c:p.d;
-    if(el.value==='-3'){ var pv=l.toners[+sec.getAttribute('data-idx')-1]; if(pv){ sp.opt=pv.opt; sp.part=pv.part; sp.price=pv.price; sp.qty=pv.qty; sp.yield=pv.yield; } }
-    else { sp.opt=+el.value; if(sp.opt>=0){ var sv2=savedFor(partKey(list,sp)); sp.price=sv2!=null?sv2:list[sp.opt].p; } else if(sp.opt===-1){ sp.price=null; } }
+    if(el.value==='-3'){ var pv=l.toners[+sec.getAttribute('data-idx')-1]; if(pv){ sp.opt=pv.opt; sp.part=pv.part; sp.price=pv.price; sp.qty=pv.qty; sp.yield=pv.yield; sp.sp=pv.sp; } }
+    else { sp.opt=+el.value; sp.sp=''; if(sp.opt>=0){ var sv2=savedFor(partKey(list,sp)); sp.price=sv2!=null?sv2:list[sp.opt].p; } else if(sp.opt===-1){ sp.price=null; } }
     save(); render();
   });
   $('lines').addEventListener('click',function(e){

@@ -7,7 +7,6 @@ Mobile-friendly tools for printer and toner sales. Static HTML, no build step. S
 - `public/quote.html` – Quote Builder (print or save as PDF)
 - `public/quote-margin.html` – Margin Quote Builder (cost plus margin or markup)
 - `public/customers.html` – Customers (saved customer list with contacts and notes)
-- `public/partfinder.html` – Part Number Lookup
 - `data/` – source spreadsheets (Canadian models, supplies, prices)
 
 Prices are CAD from brand and retailer sites, collected November 2026.

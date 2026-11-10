@@ -283,7 +283,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       var cv=SAVED['cost '+key], ch='';
       if(cv!=null){
         ch='<span class="cost">Your cost '+money(cv);
-        if(ok&&cur>0){ var mg=(cur-cv)/cur*100; ch+=' · margin '+(Math.round(mg*10)/10)+'%'; }
+        if(ok){ var pf=Math.round((cur-cv)*100)/100; ch+=' · profit '+(pf<0?'-':'')+money(Math.abs(pf))+' each'; }
         ch+='</span> <button class="link" type="button" data-act="setcost">Edit</button> <button class="link" type="button" data-act="delcost">Remove</button>';
       } else ch='<button class="link" type="button" data-act="setcost">Add cost</button>';
       h+='<div class="costl">'+ch+'</div>';

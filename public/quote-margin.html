@@ -374,7 +374,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     fetch('/api/prices',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({bulk:b})}).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(){
       Object.keys(b).forEach(function(k){ SAVED[k]=b[k]; });
       renderSaved(); applySavedToLines(); IMP=null; $('impprev').textContent='Prices applied and saved to your login.';
-    }).catch(function(){ $('impprev').textContent='Could not save the prices. Check your connection or the 2,000 saved price limit.'; });
+    }).catch(function(){ $('impprev').textContent='Could not save the prices. Check your connection or the 2,740 saved price limit.'; });
   });
   $('impclear').addEventListener('click',function(){
     if(!window.confirm('Remove all of your saved prices?')) return;

@@ -1,7 +1,7 @@
 // Saves each signed-in user's own prices, logo and clients (with saved quotes) in Workers KV.
 // The user is identified by the Cloudflare Access login token, which is verified here.
 
-const MAX_KEYS = 2000;
+const MAX_KEYS = 2740;
 const MAX_CLIENTS = 150;
 const MAX_CLIENT_PRICES = 200;
 const MAX_STATE = 60000;

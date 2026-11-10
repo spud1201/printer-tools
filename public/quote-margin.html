@@ -430,7 +430,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     var none=true;
     var h='<div class="sec" data-kind="'+kind+'" data-idx="'+idx+'"><div class="sec-t">'+label+(kind==='toner'&&l.toners.length>1?' <button class="del" type="button" data-act="delt" aria-label="Remove this toner">×</button>':'')+'</div>';
     h+='<label>Part<select data-f="opt" aria-label="'+label+' part">'+optHtml(list,sp,none,kind==='toner'&&idx>0)+'</select></label>';
-    if(sp.opt===-1) h+='<label>Part number or description<input type="text" data-f="part" value="'+esc(sp.part)+'" placeholder="Enter part number"></label><label>Page yield (optional, for cost per page)<input class="num" type="number" min="0" step="1" data-f="yield" value="'+esc(sp.yield==null?'':sp.yield)+'" placeholder="e.g. 3000"></label>';
+    if(sp.opt===-1) h+='<label>Part number or description<input type="text" data-f="part" value="'+esc(sp.part)+'" placeholder="Enter part number"></label>';
     if(sp.opt!==-2){
       var cur=(sp.opt>=0)?list[sp.opt]:null, phOn=cur&&cur.ph&&!cur.real&&+sp.price===cur.p;
       h+='<div class="row"><div><div class="need">'+((sp.price==null||sp.price==='')?'Cost needed':(phOn?'Placeholder cost. Enter the real cost.':''))+'</div><div class="sellp" data-sell="'+(kind==='toner'?'t:'+idx:'d')+'">'+sellTxt(sp)+'</div></div><label>Qty<input class="num" type="number" min="0" step="1" data-f="qty" value="'+esc(sp.qty)+'"></label><label>Unit cost<input class="num" type="number" min="0" step="0.01" data-f="price" value="'+(sp.price==null?'':esc(sp.price))+'" placeholder="0.00"></label></div>';
@@ -451,7 +451,6 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     });
     h+='<div><button class="link" type="button" data-act="addx">+ Add another supply (for colour sets, extra bottles, paper)</button></div>';
     if(p.s) h+='<details><summary>Parts on file</summary><p>'+esc(p.s)+'</p></details>';
-    h+='<div class="cpp"><span>Cost per page</span><span class="mono" data-cpp>'+cppMg(l,p)+'</span></div>';
     h+='<div class="line-total"><span>Line total</span><span class="mono" data-lt>'+ltxt(t)+'</span></div></article>';
     return h;
   }
@@ -502,7 +501,6 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
         var sp=a[1], lb=supLabel(a[2],sp); if(!lb) return;
         h+='<tr class="sub"><td>'+a[0]+': '+esc(lb)+'</td><td class="n">'+esc(sp.qty)+'</td><td class="n">'+(sp.price==null||sp.price===''?'':money(sell(sp.price)))+'</td><td class="n">'+money(supSell(sp))+'</td></tr>';
       });
-      var cc=cpp(l,p,true); if(cc.n&&!cc.miss) h+='<tr class="sub"><td colspan="4">Cost per page: '+cppVal(cc)+cppSplit(cc)+'</td></tr>';
       l.extras.forEach(function(e){ if(e.desc||e.price) h+='<tr class="sub"><td>'+esc(e.desc||'Supply')+'</td><td class="n">'+esc(e.qty)+'</td><td class="n">'+(e.price==null||e.price===''?'':money(sell(e.price)))+'</td><td class="n">'+money(r2(sell(e.price)*(+e.qty||0)))+'</td></tr>'; });
     });
     h+='</tbody></table><div class="totals"><div><span>Subtotal</span><span>'+money(sub)+'</span></div><div><span>Tax ('+(+S.tax||0)+'%)</span><span>'+money(tax)+'</span></div><div class="gt"><span>Total</span><span>'+money(sub+tax)+'</span></div></div>';
@@ -523,7 +521,6 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
         var sp=a[1], lb=supLabel(a[2],sp);
         if(lb) o.push('   '+a[0]+': '+lb+'  '+sp.qty+' x '+(sp.price==null||sp.price===''?'(price needed)':money(sell(sp.price)))+' = '+money(supSell(sp)));
       });
-      var cc=cpp(l,p,true); if(cc.n) o.push('   Cost per page: '+cppVal(cc)+cppSplit(cc)+(cc.miss?' (partial)':''));
       l.extras.forEach(function(e){ if(e.desc||e.price) o.push('   Supply: '+(e.desc||'')+'  '+e.qty+' x '+money(sell(e.price))+' = '+money(r2(sell(e.price)*(+e.qty||0)))); });
     });
     o.push('');

@@ -165,7 +165,7 @@ footer nav{display:flex;flex-wrap:wrap;gap:8px 20px}
         <div class="actions">
           <a class="btn primary" href="quote.html">Start a quote</a>
         </div>
-        <p class="note">1624 models from eight brands. Sign-in required.</p>
+        <p class="note"><span id="mcount">1624 models from 8 brands.</span> Sign-in required.</p>
       </div>
       <div class="mock" aria-label="Sample quote">
         <div class="mock-h"><div><b>Quote</b><br><span>Sample, for illustration</span></div><span class="chip">Draft</span></div>
@@ -249,6 +249,7 @@ footer nav{display:flex;flex-wrap:wrap;gap:8px 20px}
   </div>
 </footer>
 <script>
+fetch('/api/count').then(function(r){return r.ok?r.json():null}).then(function(j){if(j&&j.models){var e=document.getElementById('mcount');if(e)e.textContent=j.models.toLocaleString('en-US')+' models from '+j.brands+' brands.'}}).catch(function(){});
 fetch('/api/me').then(function(r){return r.json()}).then(function(j){if(!j.admin)return;var a=document.createElement('a');a.href='admin.html';a.textContent='Approve access'+(j.pending?' ('+j.pending+' waiting)':'');a.style.cssText='display:block;text-align:center;margin:16px;color:#0b5cad;font:16px system-ui,sans-serif';document.body.appendChild(a)}).catch(function(){});
 </script>
 </body>

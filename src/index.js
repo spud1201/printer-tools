@@ -69,6 +69,7 @@ function pendingPage(email) {
   return new Response(html, { status: 403, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
 }
 
+let COUNT = null;
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -114,6 +115,18 @@ export default {
     }
 
     if (url.pathname === '/admin.html' && !admin) return new Response('Not found', { status: 404 });
+
+    if (url.pathname === '/api/count' && request.method === 'GET') {
+      try {
+        if (!COUNT) {
+          const r = await env.ASSETS.fetch(new Request(new URL('/quote.html', url)));
+          const m = /var DATA = (\[.*?\]);\n/s.exec(await r.text());
+          const d = JSON.parse(m[1]);
+          COUNT = { models: d.length, brands: new Set(d.map((p) => p.b)).size };
+        }
+        return json(COUNT);
+      } catch (e) { return json({ error: 'unavailable' }, 503); }
+    }
 
     if (url.pathname !== '/api/prices' && url.pathname !== '/api/logo' && url.pathname !== '/api/clients') return env.ASSETS.fetch(request);
 

@@ -68,6 +68,7 @@ button.del{border:0;background:none;color:var(--muted);padding:4px 8px;font-size
 .sum{display:grid;gap:8px}
 .sum .big{font-size:1.4rem;font-weight:800}
 .hint{font-size:.8rem;color:var(--muted)}
+.savep{margin-top:6px;font-size:.85rem}.savep:empty{display:none}.savep .ok{font-weight:600}
 .need{color:var(--warn-ink);font-size:.78rem;font-weight:600}
 details summary{cursor:pointer;color:var(--a-ink);font-size:.82rem;font-weight:600}
 details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:var(--muted);overflow-wrap:anywhere}
@@ -181,7 +182,7 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
 
 <div class="wrap" style="margin-top:14px"><section id="savedcard" class="card" aria-label="My saved prices" hidden>
     <h2>My saved prices</h2>
-    <div class="hint">Saved to your login (<span id="saveduser"></span>), so they follow you to any device. The same part gets the same price on every quote. Clear a price to go back to the list price.</div>
+    <div class="hint">Saved to your login (<span id="saveduser"></span>), so they follow you to any device. The same part gets the same price on every quote once you tap Save price. Clear a price to go back to the list price.</div>
     <div class="impbox" style="margin:10px 0;padding:12px;border:1px dashed var(--line);border-radius:10px">
       <b>Import a price list</b>
       <div class="hint">Upload an Excel (.xlsx, .xls) or .csv file with a part number column and a price column (headers such as Part Number and Price work best). Matching toner and drum numbers get your price on every quote.</div>
@@ -262,6 +263,12 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     return null;
   }
   function extraKey(e){ return e.desc&&e.desc.trim() ? 'extra '+e.desc.trim().toLowerCase() : null; }
+  function savInner(key,price){
+    if(!SAVED_ON||!key||price==null||price===''||!isFinite(+price)) return '';
+    var cur=Math.round(+price*100)/100;
+    if(SAVED[key]===cur) return '<span class="ok">Price saved for next time</span>';
+    return '<button class="link" type="button" data-act="savep">Save price</button> <span class="hint">for this part number, so it fills in next time</span>';
+  }
   function savedFor(key){ return (SAVED_ON&&key&&SAVED[key]!=null)?SAVED[key]:null; }
   function savePrice(key,val){
     if(!SAVED_ON||!key) return;
@@ -276,7 +283,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   function renderSaved(){
     var keys=Object.keys(SAVED).sort(), h='';
     keys.forEach(function(k){ h+='<div class="srow"><span class="skey">'+esc(k)+'</span><span class="mono">'+money(SAVED[k])+'</span><button class="del" type="button" data-sk="'+esc(k)+'" aria-label="Remove saved price for '+esc(k)+'">×</button></div>'; });
-    $('savedlist').innerHTML=h||'<div class="hint">No saved prices yet. Change a price on a quote and it is saved here.</div>';
+    $('savedlist').innerHTML=h||'<div class="hint">No saved prices yet. Tap Save price under a price on a quote and it is saved here.</div>';
   }
   var XLSX_URL='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', IMP=null, PMAP=null;
   function nrm(s){ return String(s==null?'':s).toUpperCase().replace(/[^A-Z0-9]/g,''); }
@@ -410,6 +417,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     if(sp.opt!==-2){
       var cur=(sp.opt>=0)?list[sp.opt]:null, phOn=cur&&cur.ph&&!cur.real&&+sp.price===cur.p;
       h+='<div class="row"><div class="need">'+((sp.price==null||sp.price==='')?'Price needed':(phOn?'Placeholder price. Enter the real price.':''))+'</div><label>Qty<input class="num" type="number" min="0" step="1" data-f="qty" value="'+esc(sp.qty)+'"></label><label>Unit price<input class="num" type="number" min="0" step="0.01" data-f="price" value="'+(sp.price==null?'':esc(sp.price))+'" placeholder="0.00"></label></div>';
+      h+='<div class="savep" data-savep>'+savInner(partKey(list,sp),sp.price)+'</div>';
     }
     return h+'</div>';
   }
@@ -422,7 +430,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     h+='<div><button class="link" type="button" data-act="addt">+ Add another toner</button></div>';
     h+=supHtml(l,'drum','Drum or imaging unit',p.d,l.drum,0);
     l.extras.forEach(function(e,i){
-      h+='<div class="sec" data-extra="'+i+'"><div class="sec-t">Other supply <button class="del" type="button" data-act="delx" aria-label="Remove supply">×</button></div><label>Description or part number<input type="text" data-x="desc" value="'+esc(e.desc)+'"></label><div class="row"><div></div><label>Qty<input class="num" type="number" min="0" step="1" data-x="qty" value="'+esc(e.qty)+'"></label><label>Unit price<input class="num" type="number" min="0" step="0.01" data-x="price" value="'+(e.price==null?'':esc(e.price))+'" placeholder="0.00"></label></div></div>';
+      h+='<div class="sec" data-extra="'+i+'"><div class="sec-t">Other supply <button class="del" type="button" data-act="delx" aria-label="Remove supply">×</button></div><label>Description or part number<input type="text" data-x="desc" value="'+esc(e.desc)+'"></label><div class="row"><div></div><label>Qty<input class="num" type="number" min="0" step="1" data-x="qty" value="'+esc(e.qty)+'"></label><label>Unit price<input class="num" type="number" min="0" step="0.01" data-x="price" value="'+(e.price==null?'':esc(e.price))+'" placeholder="0.00"></label></div><div class="savep" data-savep>'+savInner(extraKey(e),e.price)+'</div></div>';
     });
     h+='<div><button class="link" type="button" data-act="addx">+ Add another supply (for colour sets, extra bottles, paper)</button></div>';
     if(p.s) h+='<details><summary>Parts on file</summary><p>'+esc(p.s)+'</p></details>';
@@ -500,9 +508,9 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   $('lines').addEventListener('input',function(e){
     var el=e.target, l=findLine(el); if(!l) return;
     var ex=el.closest('[data-extra]');
-    if(ex){ var x=l.extras[+ex.getAttribute('data-extra')]; x[el.getAttribute('data-x')]=el.value; if(el.getAttribute('data-x')==='price') savePrice(extraKey(x),el.value); }
+    if(ex){ var x=l.extras[+ex.getAttribute('data-extra')]; x[el.getAttribute('data-x')]=el.value; if(el.getAttribute('data-x')==='price'){ var sv=ex.querySelector('[data-savep]'); if(sv) sv.innerHTML=savInner(extraKey(x),el.value); } }
     else if(el.getAttribute('data-top')){ l[el.getAttribute('data-f')]=el.value; }
-    else { var sec=el.closest('[data-kind]'); if(!sec||el.tagName==='SELECT') return; var sp=getSp(l,sec); sp[el.getAttribute('data-f')]=el.value; if(el.getAttribute('data-f')==='price'){ var pp=DATA[l.key]; savePrice(partKey(sec.getAttribute('data-kind')==='toner'?pp.c:pp.d,sp),el.value); } }
+    else { var sec=el.closest('[data-kind]'); if(!sec||el.tagName==='SELECT') return; var sp=getSp(l,sec); sp[el.getAttribute('data-f')]=el.value; if(el.getAttribute('data-f')==='price'){ var pp=DATA[l.key], sv=sec.querySelector('[data-savep]'); if(sv) sv.innerHTML=savInner(partKey(sec.getAttribute('data-kind')==='toner'?pp.c:pp.d,sp),el.value); } }
     save(); totals();
   });
   $('lines').addEventListener('change',function(e){
@@ -521,6 +529,12 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     else if(act==='delt'){ l.toners.splice(+b.closest('[data-kind]').getAttribute('data-idx'),1); }
     else if(act==='addx'){ l.extras.push({desc:'',qty:1,price:null}); }
     else if(act==='delx'){ l.extras.splice(+b.closest('[data-extra]').getAttribute('data-extra'),1); }
+    else if(act==='savep'){
+      var s2=b.closest('[data-extra]'), key, pr;
+      if(s2){ var x2=l.extras[+s2.getAttribute('data-extra')]; key=extraKey(x2); pr=x2.price; }
+      else { var sc=b.closest('[data-kind]'), pq=DATA[l.key], sq=getSp(l,sc); key=partKey(sc.getAttribute('data-kind')==='toner'?pq.c:pq.d,sq); pr=sq.price; }
+      savePrice(key,pr);
+    }
     else return;
     save(); render();
   });

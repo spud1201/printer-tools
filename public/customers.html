@@ -195,10 +195,10 @@ h2.coll button[aria-expanded=false] .chev{transform:rotate(-90deg)}
       if(ct.email) h+='<div class="ln"><a href="mailto:'+esc(ct.email)+'">'+esc(ct.email)+'</a></div>';
       if(ct.address) h+='<div class="ln">'+esc(ct.address)+'</div>';
       if(c.notes) h+='<div class="nt">'+esc(c.notes)+'</div>';
-      var tg='<span class="tag" style="background:'+(st(c)==='buying'?'var(--ok-ink);color:var(--bg)':'var(--warn-bg);color:var(--warn-ink)')+'">'+(st(c)==='buying'?'Buying':'Quoted')+'</span>'; if(c.quote) tg+='<span class="tag">Quote saved</span>'; if(c.margin) tg+='<span class="tag">Margin quote saved</span>';
+      var tg='<span class="tag" style="background:'+(st(c)==='buying'?'var(--ok-ink);color:var(--bg)':'var(--warn-bg);color:var(--warn-ink)')+'">'+(st(c)==='buying'?'Buying':'Quoted')+'</span>'; if(c.quote) tg+='<span class="tag">Quote saved</span>';
       var n=plines(c); if(n) tg+='<span class="tag">'+n+' printer'+(n===1?'':'s')+'</span>';
       if(tg) h+='<div class="tags">'+tg+'</div>';
-      h+='<div class="btns"><button type="button" data-a="edit">Edit</button><button type="button" data-a="status">'+(st(c)==='buying'?'Move to quoted':'Mark as buying')+'</button><button type="button" data-a="quote">Open quote</button><button type="button" data-a="margin">Open margin quote</button><a class="btn" href="supplies.html">Supplies</a><button type="button" class="dng" data-a="del">Delete</button></div></article>';
+      h+='<div class="btns"><button type="button" data-a="edit">Edit</button><button type="button" data-a="status">'+(st(c)==='buying'?'Move to quoted':'Mark as buying')+'</button><button type="button" data-a="quote">Open quote</button><a class="btn" href="supplies.html">Supplies</a><button type="button" class="dng" data-a="del">Delete</button></div></article>';
       return h;
     }).join('');
   }

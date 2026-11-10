@@ -68,7 +68,7 @@ button.del{border:0;background:none;color:var(--muted);padding:4px 8px;font-size
 .sum{display:grid;gap:8px}
 .sum .big{font-size:1.4rem;font-weight:800}
 .hint{font-size:.8rem;color:var(--muted)}
-.savep{margin-top:6px;font-size:.85rem}.savep:empty{display:none}.savep .ok{font-weight:600}
+.savep{margin-top:6px;font-size:.85rem}.savep:empty{display:none}.costl{margin-top:3px;font-size:.78rem;color:var(--muted)}.costl .cost{font-weight:500}.costl .link{font-size:.78rem}.savep .ok{font-weight:600}
 .need{color:var(--warn-ink);font-size:.78rem;font-weight:600}
 details summary{cursor:pointer;color:var(--a-ink);font-size:.82rem;font-weight:600}
 details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:var(--muted);overflow-wrap:anywhere}
@@ -182,11 +182,11 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
 
 <div class="wrap" style="margin-top:14px"><section id="savedcard" class="card" aria-label="My saved prices" hidden>
     <h2>My saved prices</h2>
-    <div class="hint">Saved to your login (<span id="saveduser"></span>), so they follow you to any device. The same part gets the same price on every quote once you tap Save price. Clear a price to go back to the list price.</div>
+    <div class="hint">Saved to your login (<span id="saveduser"></span>), so they follow you to any device. The same part gets the same price on every quote once you tap Save price. Clear a price to go back to the list price. Your costs are private: they only show on your screen as small grey text, never on the customer quote.</div>
     <div class="impbox" style="margin:10px 0;padding:12px;border:1px dashed var(--line);border-radius:10px">
       <b>Import a price list</b>
       <div class="hint">Upload an Excel (.xlsx, .xls) or .csv file with a part number column and a price column (headers such as Part Number and Price work best). Matching toner and drum numbers get your price on every quote.</div>
-      <label class="hint" for="impkind" style="display:block;margin-top:6px">These prices are for: <select id="impkind"><option value="oem">Original (OEM) parts</option><option value="compat">Compatible parts</option></select></label>
+      <label class="hint" for="impkind" style="display:block;margin-top:6px">This price list holds: <select id="impkind"><option value="oem">Selling prices: original (OEM) parts</option><option value="compat">Selling prices: compatible parts</option><option value="cost">My costs: original (OEM) parts</option><option value="costcompat">My costs: compatible parts</option></select></label>
       <input id="impfile" type="file" accept=".xlsx,.xls,.csv" hidden>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button id="impbtn" type="button">Choose price list</button><button id="impapply" type="button" hidden>Apply prices</button><button id="impclear" type="button">Remove all saved prices</button></div>
       <div class="hint" id="impprev" role="status"></div>
@@ -264,18 +264,29 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   }
   function extraKey(e){ return e.desc&&e.desc.trim() ? 'extra '+e.desc.trim().toLowerCase() : null; }
   function savInner(key,price){
-    if(!key||price==null||price===''||!isFinite(+price)) return '';
-    var cur=Math.round(+price*100)/100, h='';
-    if(SAVED_ON){
-      if(SAVED[key]===cur) h+='<span class="ok">Price saved for next time</span>';
-      else h+='<button class="link" type="button" data-act="savep">Save price</button> <span class="hint">for this part number</span>';
+    if(!key) return '';
+    var ok=!(price==null||price===''||!isFinite(+price)), cur=ok?Math.round(+price*100)/100:null, h='';
+    if(ok){
+      if(SAVED_ON){
+        if(SAVED[key]===cur) h+='<span class="ok">Price saved for next time</span>';
+        else h+='<button class="link" type="button" data-act="savep">Save price</button> <span class="hint">for this part number</span>';
+      }
+      var c=(CUR&&CL[CUR])?CL[CUR]:null;
+      if(c){
+        var cp=c.prices&&c.prices[key];
+        h+=(h?' &nbsp;·&nbsp; ':'');
+        if(cp===cur) h+='<span class="ok">Saved for '+esc(c.name)+'</span> <button class="link" type="button" data-act="delc">Remove</button>';
+        else h+='<button class="link" type="button" data-act="savec">Save for '+esc(c.name)+'</button>';
+      }
     }
-    var c=(CUR&&CL[CUR])?CL[CUR]:null;
-    if(c){
-      var cp=c.prices&&c.prices[key];
-      h+=(h?' &nbsp;·&nbsp; ':'');
-      if(cp===cur) h+='<span class="ok">Saved for '+esc(c.name)+'</span> <button class="link" type="button" data-act="delc">Remove</button>';
-      else h+='<button class="link" type="button" data-act="savec">Save for '+esc(c.name)+'</button>';
+    if(SAVED_ON){
+      var cv=SAVED['cost '+key], ch='';
+      if(cv!=null){
+        ch='<span class="cost">Your cost '+money(cv);
+        if(ok&&cur>0){ var mg=(cur-cv)/cur*100; ch+=' · margin '+(Math.round(mg*10)/10)+'%'; }
+        ch+='</span> <button class="link" type="button" data-act="setcost">Edit</button> <button class="link" type="button" data-act="delcost">Remove</button>';
+      } else ch='<button class="link" type="button" data-act="setcost">Add cost</button>';
+      h+='<div class="costl">'+ch+'</div>';
     }
     return h;
   }
@@ -292,9 +303,13 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     },600);
   }
   function renderSaved(){
-    var keys=Object.keys(SAVED).sort(), h='';
-    keys.forEach(function(k){ h+='<div class="srow"><span class="skey">'+esc(k)+'</span><span class="mono">'+money(SAVED[k])+'</span><button class="del" type="button" data-sk="'+esc(k)+'" aria-label="Remove saved price for '+esc(k)+'">×</button></div>'; });
-    $('savedlist').innerHTML=h||'<div class="hint">No saved prices yet. Tap Save price under a price on a quote and it is saved here.</div>';
+    var keys=Object.keys(SAVED).sort(), h='', hc='';
+    function row(k,label){ return '<div class="srow"><span class="skey">'+esc(label)+'</span><span class="mono">'+money(SAVED[k])+'</span><button class="del" type="button" data-sk="'+esc(k)+'" aria-label="Remove saved '+esc(label)+'">×</button></div>'; }
+    keys.forEach(function(k){ if(k.indexOf('cost ')===0) hc+=row(k,k.slice(5)); else h+=row(k,k); });
+    var out='';
+    if(h) out+=h;
+    if(hc) out+='<div class="hint" style="margin-top:10px"><b>My costs</b> (private, never on the customer quote)</div>'+hc;
+    $('savedlist').innerHTML=out||'<div class="hint">No saved prices yet. Tap Save price under a price on a quote and it is saved here.</div>';
   }
   var XLSX_URL='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', IMP=null, PMAP=null;
   function nrm(s){ return String(s==null?'':s).toUpperCase().replace(/[^A-Z0-9]/g,''); }
@@ -340,10 +355,10 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     return out;
   }
   function planImport(items){
-    var map=buildPMap(), bulk={}, hit=0, miss=[], CMP=$('impkind')&&$('impkind').value==='compat';
+    var map=buildPMap(), bulk={}, hit=0, miss=[], KD=($('impkind')&&$('impkind').value)||'oem', PRE=(KD.indexOf('cost')===0?'cost ':'')+(/compat/.test(KD)?'compat ':'');
     items.forEach(function(it){
       var k=nrm(it.part), m=map[k];
-      if(m){ hit++; Object.keys(m).forEach(function(t){ bulk[(CMP?'compat ':'')+t]=it.price; }); } else miss.push(it.part);
+      if(m){ hit++; Object.keys(m).forEach(function(t){ bulk[PRE+t]=it.price; }); } else miss.push(it.part);
     });
     return {bulk:bulk, hit:hit, miss:miss, total:items.length};
   }
@@ -542,6 +557,21 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       if(s2){ var x2=l.extras[+s2.getAttribute('data-extra')]; key=extraKey(x2); pr=x2.price; }
       else { var sc=b.closest('[data-kind]'), pq=DATA[l.key], sq=getSp(l,sc); key=partKey(sc.getAttribute('data-kind')==='toner'?pq.c:pq.d,sq); pr=sq.price; }
       savePrice(key,pr);
+    }
+    else if(act==='setcost'||act==='delcost'){
+      var s4=b.closest('[data-extra]'), key4;
+      if(s4){ key4=extraKey(l.extras[+s4.getAttribute('data-extra')]); }
+      else { var sc4=b.closest('[data-kind]'), pq4=DATA[l.key]; key4=partKey(sc4.getAttribute('data-kind')==='toner'?pq4.c:pq4.d,getSp(l,sc4)); }
+      if(!key4||!SAVED_ON) return;
+      var ck='cost '+key4;
+      if(act==='delcost') savePrice(ck,'');
+      else {
+        var ans=window.prompt('Your cost for '+key4+' (private, never shown on the customer quote). Leave blank to remove.',SAVED[ck]!=null?SAVED[ck]:'');
+        if(ans===null) return;
+        ans=String(ans).replace(/[^0-9.]/g,'');
+        if(ans!==''&&!(isFinite(+ans)&&+ans>=0)) return;
+        savePrice(ck,ans);
+      }
     }
     else if(act==='savec'||act==='delc'){
       var s3=b.closest('[data-extra]'), key3, pr3;

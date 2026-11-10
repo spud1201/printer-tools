@@ -131,7 +131,7 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
     </div>
     <label class="chk" style="display:flex;align-items:center;gap:8px;flex-direction:row;font-size:.95rem;color:var(--ink)"><input id="clauto" type="checkbox" style="width:1.2rem;height:1.2rem;flex:none"> Save printers to this client as I work</label>
     <div class="actions"><button id="clsave" class="primary" type="button">Save to client</button><button id="cldel" type="button" hidden>Delete client</button></div>
-    <div class="hint" id="clmsg">Saved to your login, so only you see your clients. Saving uses the Customer name below.</div>
+    <div class="hint" id="clmsg">Saved to your login, so only you see your clients. Saving uses the Customer name below. Select a client to see a Save for button under each price, which saves a price for that customer only.</div>
   </section>
 
   <section class="card" aria-label="Quote details">
@@ -264,12 +264,23 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   }
   function extraKey(e){ return e.desc&&e.desc.trim() ? 'extra '+e.desc.trim().toLowerCase() : null; }
   function savInner(key,price){
-    if(!SAVED_ON||!key||price==null||price===''||!isFinite(+price)) return '';
-    var cur=Math.round(+price*100)/100;
-    if(SAVED[key]===cur) return '<span class="ok">Price saved for next time</span>';
-    return '<button class="link" type="button" data-act="savep">Save price</button> <span class="hint">for this part number, so it fills in next time</span>';
+    if(!key||price==null||price===''||!isFinite(+price)) return '';
+    var cur=Math.round(+price*100)/100, h='';
+    if(SAVED_ON){
+      if(SAVED[key]===cur) h+='<span class="ok">Price saved for next time</span>';
+      else h+='<button class="link" type="button" data-act="savep">Save price</button> <span class="hint">for this part number</span>';
+    }
+    var c=(CUR&&CL[CUR])?CL[CUR]:null;
+    if(c){
+      var cp=c.prices&&c.prices[key];
+      h+=(h?' &nbsp;·&nbsp; ':'');
+      if(cp===cur) h+='<span class="ok">Saved for '+esc(c.name)+'</span> <button class="link" type="button" data-act="delc">Remove</button>';
+      else h+='<button class="link" type="button" data-act="savec">Save for '+esc(c.name)+'</button>';
+    }
+    return h;
   }
-  function savedFor(key){ return (SAVED_ON&&key&&SAVED[key]!=null)?SAVED[key]:null; }
+  function clientPrice(key){ var c=(typeof CUR!=='undefined'&&CUR&&CL[CUR])?CL[CUR]:null; return (c&&key&&c.prices&&c.prices[key]!=null)?c.prices[key]:null; }
+  function savedFor(key){ var cp=clientPrice(key); if(cp!=null) return cp; return (SAVED_ON&&key&&SAVED[key]!=null)?SAVED[key]:null; }
   function savePrice(key,val){
     if(!SAVED_ON||!key) return;
     if(val===''||val==null||!isFinite(+val)) delete SAVED[key]; else SAVED[key]=Math.round(+val*100)/100;
@@ -532,6 +543,19 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       else { var sc=b.closest('[data-kind]'), pq=DATA[l.key], sq=getSp(l,sc); key=partKey(sc.getAttribute('data-kind')==='toner'?pq.c:pq.d,sq); pr=sq.price; }
       savePrice(key,pr);
     }
+    else if(act==='savec'||act==='delc'){
+      var s3=b.closest('[data-extra]'), key3, pr3;
+      if(s3){ var x3=l.extras[+s3.getAttribute('data-extra')]; key3=extraKey(x3); pr3=x3.price; }
+      else { var sc3=b.closest('[data-kind]'), pq3=DATA[l.key], sq3=getSp(l,sc3); key3=partKey(sc3.getAttribute('data-kind')==='toner'?pq3.c:pq3.d,sq3); pr3=sq3.price; }
+      var cid=CUR, cl=CL[cid];
+      if(!cl||!key3||!isFinite(+pr3)) return;
+      var val=(act==='delc')?null:Math.round(+pr3*100)/100;
+      clApi('PUT','',{id:cid,name:cl.name,cprice:{key:key3,price:val}}).then(function(){
+        cl.prices=cl.prices||{}; if(val==null) delete cl.prices[key3]; else cl.prices[key3]=val;
+        clMsg(val==null?('Removed the '+cl.name+' price for '+key3+'.'):('Saved '+key3+' at '+money(val)+' for '+cl.name+'.')); render();
+      }).catch(function(){ clMsg('Could not save the price for '+cl.name+'. Check your connection.'); });
+      return;
+    }
     else return;
     save(); render();
   });
@@ -562,7 +586,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     $('clauto').addEventListener('change',function(){ try{ localStorage.setItem('printer-client-auto',this.checked?'1':'0'); }catch(e){} clMsg(this.checked?'Changes will save to the selected client.':'Auto-save is off. Press Save to client when you want to save.'); if(this.checked) window.clAuto(); });
     clApi('GET').then(function(j){
       CL=j.clients||{}; try{ CUR=localStorage.getItem(clKey())||''; }catch(e){}
-      $('clientcard').hidden=false; clRender();
+      $('clientcard').hidden=false; clRender(); render();
       try{
         var op=localStorage.getItem('printer-client-open')||''; localStorage.removeItem('printer-client-open');
         var pr=op.split(':'); if(pr[0]===TOOL&&CL[pr[1]]){ $('clsel').value=pr[1]; $('clsel').dispatchEvent(new Event('change')); }
@@ -577,10 +601,10 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
         return;
       }
       CUR=this.value; try{ localStorage.setItem(clKey(),CUR); }catch(e){}
-      $('cldel').hidden=!CUR; if(!CUR){ clMsg('No client selected. The quote below is not tied to a client.'); return; }
+      $('cldel').hidden=!CUR; if(!CUR){ clMsg('No client selected. The quote below is not tied to a client.'); render(); return; }
       var c=CL[CUR];
       if(c[TOOL]){ try{ localStorage.setItem(KEY,JSON.stringify(c[TOOL])); }catch(e){} location.reload(); return; }
-      S.cust=c.name; save(); $('cust').value=c.name; totals();
+      S.cust=c.name; save(); $('cust').value=c.name; totals(); render();
       clMsg('No quote saved for '+c.name+' in this tool yet. Add printers, then press Save to client.');
     });
     $('clsave').addEventListener('click',function(){

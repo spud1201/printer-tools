@@ -153,6 +153,15 @@ export default {
           if (!t) delete rec.pnotes[body.pnote.key];
           else if (body.pnote.key in rec.pnotes || Object.keys(rec.pnotes).length < 300) rec.pnotes[body.pnote.key] = t;
         }
+        if (body.cprice && typeof body.cprice === 'object' && typeof body.cprice.key === 'string' && body.cprice.key.length > 0 && body.cprice.key.length <= 120) {
+          rec.prices = rec.prices || {};
+          const pk = body.cprice.key, pv = body.cprice.price;
+          if (pv === null) delete rec.prices[pk];
+          else if (typeof pv === 'number' && isFinite(pv) && pv >= 0 && pv < 10000000) {
+            if (!(pk in rec.prices) && Object.keys(rec.prices).length >= 500) return json({ error: 'too many prices' }, 400);
+            rec.prices[pk] = Math.round(pv * 100) / 100;
+          } else return json({ error: 'bad price' }, 400);
+        }
         if (body.tool === 'quote' || body.tool === 'margin') {
           if (!body.state || typeof body.state !== 'object' || JSON.stringify(body.state).length > MAX_STATE) return json({ error: 'quote too large' }, 400);
           rec[body.tool] = body.state;

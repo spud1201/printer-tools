@@ -553,7 +553,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       clApi('PUT','',{id:cid,name:cl.name,cprice:{key:key3,price:val}}).then(function(){
         cl.prices=cl.prices||{}; if(val==null) delete cl.prices[key3]; else cl.prices[key3]=val;
         clMsg(val==null?('Removed the '+cl.name+' price for '+key3+'.'):('Saved '+key3+' at '+money(val)+' for '+cl.name+'.')); render();
-      }).catch(function(){ clMsg('Could not save the price for '+cl.name+'. Check your connection.'); });
+      }).catch(function(){ clMsg('Could not save the price for '+cl.name+'. Check your connection, or they may be at the 200 saved price limit.'); });
       return;
     }
     else return;

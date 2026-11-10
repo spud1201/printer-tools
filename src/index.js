@@ -3,6 +3,7 @@
 
 const MAX_KEYS = 2000;
 const MAX_CLIENTS = 150;
+const MAX_CLIENT_PRICES = 200;
 const MAX_STATE = 60000;
 let certCache = null;
 
@@ -158,7 +159,7 @@ export default {
           const pk = body.cprice.key, pv = body.cprice.price;
           if (pv === null) delete rec.prices[pk];
           else if (typeof pv === 'number' && isFinite(pv) && pv >= 0 && pv < 10000000) {
-            if (!(pk in rec.prices) && Object.keys(rec.prices).length >= 500) return json({ error: 'too many prices' }, 400);
+            if (!(pk in rec.prices) && Object.keys(rec.prices).length >= MAX_CLIENT_PRICES) return json({ error: 'too many prices' }, 400);
             rec.prices[pk] = Math.round(pv * 100) / 100;
           } else return json({ error: 'bad price' }, 400);
         }

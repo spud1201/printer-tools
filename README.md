@@ -6,7 +6,6 @@ Mobile-friendly tools for printer and toner sales. Static HTML, no build step. S
 - `public/index.html` – home page
 - `public/quote.html` – Quote Builder (print or save as PDF)
 - `public/quote-margin.html` – Margin Quote Builder (cost plus margin or markup)
-- `public/finder.html` – Printer Finder (Brother, Lexmark, HP, Xerox, Canon, Epson)
 - `public/customers.html` – Customers (saved customer list with contacts and notes)
 - `public/partfinder.html` – Part Number Lookup
 - `data/` – source spreadsheets (Canadian models, supplies, prices)

@@ -169,7 +169,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function name(p){return p.m.indexOf(p.b)===0?p.m:p.b+' '+p.m;}
   DATA.forEach(function(p,i){ p.i=i; p.n=name(p); });
-  var CL={}, OPENAP={};
+  var CL={}, OPENAP={}, PMSG={}, LASTF={};
   // printers a client has on their saved quotes: model index -> total qty, plus the parts picked
   function printersFor(c){
     var map={},order=[];
@@ -223,7 +223,8 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
         +'<label>Page yield (optional)<input type="number" inputmode="numeric" min="0" data-f="y"></label>'
         +'<label>Price (optional)<input type="number" inputmode="decimal" min="0" step="0.01" data-f="p"></label>'
         +'<label class="chk"><input type="checkbox" data-f="c"> Compatible part</label>'
-        +'<div class="full"><button class="primary" type="button" data-addp="'+p.i+'">Add to this printer</button></div></div></details>';
+        +'<div class="full"><button class="primary" type="button" data-addp="'+p.i+'">Add to this printer</button></div></div></details>'
+        +(PMSG[p.i]?'<div class="pmsg noprint" role="status" style="font-size:.85rem;font-weight:600;color:'+(PMSG[p.i].err?'var(--danger)':'var(--ok-ink)')+'">'+esc(PMSG[p.i].t)+'</div>':'');
       var pn=((c.pnotes&&c.pnotes[p.i])||'');
       h+='<label class="pnote noprint">Printer note<input type="text" data-pn="'+p.i+'" maxlength="500" autocomplete="off" placeholder="Location, serial number, anything to remember" value="'+esc(pn)+'"></label>';
       if(pn){ h+='<div class="pnprint">Note: '+esc(pn)+'</div>'; t+='  Note: '+pn+'\n'; }
@@ -231,6 +232,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     });
     if((c.notes||'').trim()) t+='\nNotes: '+c.notes.trim()+'\n';
     out.innerHTML=h; $('txt').value=t;
+    Object.keys(LASTF).forEach(function(k){ var box=out.querySelector('details[data-ap="'+k+'"]'); if(!box){ return; } var f=LASTF[k]; box.open=true; function sv(n,v){ var el=box.querySelector('[data-f='+n+']'); if(el) el.value=v==null?'':v; } sv('k',f.k); sv('t',f.t); sv('d',f.d); sv('y',f.y); sv('p',f.p); var ck=box.querySelector('[data-f=c]'); if(ck) ck.checked=!!f.c; });
     if(fk!=null){ var ne=out.querySelector('input[data-pn="'+fk+'"]'); if(ne){ ne.focus(); try{ ne.setSelectionRange(fs,fs); }catch(e){} } } $('copycard').hidden=false; $('cm').textContent='';
   }
   function fillSel(){
@@ -299,10 +301,13 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     Promise.all(jobs).then(function(){ addMsg(DATA[k].n+' removed.'); render(); }).catch(function(){ c.quote=backup.quote; c.margin=backup.margin; addMsg('Could not remove. Try again.'); render(); });
   });
   function csupOf(c,k){ c.csup=c.csup||{}; var r=c.csup[k]; if(!r) r=c.csup[k]={hidden:[],extra:[]}; r.hidden=r.hidden||[]; r.extra=r.extra||[]; return r; }
-  function saveSup(id,k,before){
+  function saveSup(id,k,before,form){
     var c=CL[id], r=(c.csup&&c.csup[k])||{hidden:[],extra:[]};
-    return fetch('/api/clients',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({id:id,name:c.name,csup:{key:k,hidden:r.hidden,extra:r.extra}})}).then(function(x){ if(!x.ok) throw 0; if(!r.hidden.length&&!r.extra.length&&c.csup) delete c.csup[k]; addMsg('Saved.'); render(); })
-      .catch(function(){ if(before===undefined){ if(c.csup) delete c.csup[k]; } else { c.csup=c.csup||{}; c.csup[k]=before; } addMsg('Could not save. Try again.'); render(); });
+    PMSG[k]={t:'Saving...',err:false}; render();
+    return fetch('/api/clients',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({id:id,name:c.name,csup:{key:k,hidden:r.hidden,extra:r.extra}})})
+      .then(function(x){ if(!x.ok) return x.json().catch(function(){ return {}; }).then(function(j){ throw new Error((j&&j.error)||('error '+x.status)); }); })
+      .then(function(){ if(!r.hidden.length&&!r.extra.length&&c.csup) delete c.csup[k]; delete LASTF[k]; PMSG[k]={t:'Saved to '+c.name+'.',err:false}; render(); })
+      .catch(function(err){ if(before===undefined){ if(c.csup) delete c.csup[k]; } else { c.csup=c.csup||{}; c.csup[k]=before; } if(form) LASTF[k]=form; PMSG[k]={t:'Could not save ('+(err&&err.message?err.message:'no connection')+'). Your entry is kept; try again.',err:true}; render(); });
   }
   function snap(c,k){ return c.csup&&c.csup[k]?JSON.parse(JSON.stringify(c.csup[k])):undefined; }
   $('out').addEventListener('toggle',function(e){ var d=e.target; if(d&&d.getAttribute&&d.getAttribute('data-ap')!=null) OPENAP[d.getAttribute('data-ap')]=d.open; },true);
@@ -328,7 +333,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       var pp=parseFloat(g('p').value); if(isFinite(pp)&&pp>=0) it2.p=pp;
       before=snap(c,k); var r5=csupOf(c,k);
       if(r5.extra.length>=30){ addMsg('That printer already has 30 added parts.'); return; }
-      r5.extra.push(it2); OPENAP[k]=false; saveSup(id,k,before);
+      r5.extra.push(it2); OPENAP[k]=false; saveSup(id,k,before,{k:it2.k,t:it2.t,d:it2.d,y:it2.y,p:it2.p,c:it2.c});
     }
   });
   var noteT=null, shownId='';

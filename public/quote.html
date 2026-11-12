@@ -670,6 +670,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   }
   function init(){
     load();
+    (function(){ var n=0,b=[]; DATA.forEach(function(p){ if(p.x) return; n++; if(b.indexOf(p.b)<0) b.push(p.b); }); var bl=b.length>1?b.slice(0,-1).join(', ')+' and '+b[b.length-1]:b.join(''); $('pickmsg').textContent=n.toLocaleString('en-US')+' models from '+bl+'.'; })();
     if(!S.qno) S.qno=newNo(); if(!S.qdate) S.qdate=today(); if(!S.qid) S.qid=newQid();
     fill('cust','cust'); fill('caddr','caddr'); fill('qno','qno'); fill('qdate','qdate'); fill('qby','qby'); fill('qco','qco');
     $('taxp').value=S.tax; $('taxp').addEventListener('input',function(){ S.tax=this.value; save(); totals(); });

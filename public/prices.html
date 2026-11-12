@@ -252,7 +252,7 @@ h2.coll button[aria-expanded=false] .chev{transform:rotate(-90deg)}
     fetch('/api/prices',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({bulk:b})}).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(){
       Object.keys(b).forEach(function(k){ SAVED[k]=b[k]; });
       renderSaved(); IMP=null; $('impprev').textContent='Prices applied and saved to your login.';
-    }).catch(function(){ $('impprev').textContent='Could not save the prices. Check your connection or the 3,500 saved price limit.'; });
+    }).catch(function(){ $('impprev').textContent='Could not save the prices. Check your connection or the 8,000 saved price limit.'; });
   });
   $('impclear').addEventListener('click',function(){
     if(!window.confirm('Remove all of your saved prices?')) return;

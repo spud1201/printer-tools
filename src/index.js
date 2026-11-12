@@ -123,7 +123,8 @@ export default {
           const r = await env.ASSETS.fetch(new Request(new URL('/quote.html', url)));
           const m = /var DATA = (\[.*?\]);\n/s.exec(await r.text());
           const d = JSON.parse(m[1]);
-          COUNT = { models: d.length, brands: new Set(d.map((p) => p.b)).size };
+          const dd = d.filter((p) => !p.x);
+          COUNT = { models: dd.length, brands: new Set(dd.map((p) => p.b)).size };
         }
         return json(COUNT);
       } catch (e) { return json({ error: 'unavailable' }, 503); }

@@ -611,7 +611,8 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     if(CLEARFN) CLEARFN();
     clRender();
     clMsg('New quote started. Type the customer name, add printers, then press Save to client.');
-    try{ $('cust').focus(); }catch(e){}
+    try{ window.scrollTo(0,0); }catch(e){}
+    try{ $('cust').focus({preventScroll:true}); }catch(e){}
   }
   function clRender(){
     var ids=Object.keys(CL).sort(function(a,b){ return CL[a].name.toLowerCase()<CL[b].name.toLowerCase()?-1:1; });

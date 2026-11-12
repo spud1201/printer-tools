@@ -217,6 +217,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   });
   var KEY='printer-quote-v2';
   var uid=1;
+  var SKIPCONF=false;
   var S={cust:'',qno:'',qdate:'',qby:'',qco:'',tax:5,lines:[]};
   function today(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   function newNo(){ return 'QT-'+today().replace(/-/g,'')+'-'+String(Math.floor(Math.random()*900)+100); }
@@ -624,8 +625,9 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     }).catch(function(){});
     $('clsel').addEventListener('change',function(){
       if(this.value==='__new'){
+        if((S.lines.length||S.cust)&&!window.confirm('Start a new quote? The current quote will be deleted unless you have saved it to a client.')){ this.value=CUR||''; return; }
         CUR=''; try{ localStorage.setItem(clKey(),''); }catch(e){}
-        $('clear').click(); clRender();
+        SKIPCONF=true; $('clear').click(); SKIPCONF=false; clRender();
         clMsg('New quote started. Type the customer name, add printers, then press Save to client.');
         try{ $('cust').focus(); }catch(e){}
         return;
@@ -713,7 +715,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t.value).then(ok,fb); } else fb();
     });
     $('clear').addEventListener('click',function(){
-      if((S.lines.length||S.cust)&&!window.confirm('Start a new quote? The current quote will be deleted unless you have saved it to a client.')) return;
+      if(!SKIPCONF&&(S.lines.length||S.cust)&&!window.confirm('Start a new quote? The current quote will be deleted unless you have saved it to a client.')) return;
       S={cust:'',qno:newNo(),qdate:today(),qby:S.qby||'',qco:S.qco||'',tax:S.tax,lines:[]}; save();
       $('cust').value=''; $('qno').value=S.qno; $('qdate').value=S.qdate; render(); $('copymsg').textContent='';
     });

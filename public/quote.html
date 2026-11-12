@@ -53,6 +53,9 @@ button.del{border:0;background:none;color:var(--muted);padding:4px 8px;font-size
 .add{display:grid;gap:8px;grid-template-columns:minmax(0,1fr) auto}
 .line{display:grid;gap:10px}
 .line-head{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.lbody{display:grid;gap:12px;min-width:0}
+.lbody[hidden]{display:none}
+button.tog{border:0;background:none;padding:2px 6px 2px 0;font-size:1.1rem;line-height:1.2;color:var(--muted)}
 .line-head h3{margin:0;font-size:1.05rem;line-height:1.2;font-weight:700;min-width:0;overflow-wrap:anywhere}
 .type{color:var(--muted);font-size:.85rem}
 .tag{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:6px;padding:2px 6px;background:var(--warn-bg);color:var(--warn-ink);margin-left:6px;vertical-align:middle}
@@ -164,6 +167,7 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
     <div class="hint" id="pickmsg">183 models from Brother, Lexmark, HP, Xerox, Canon and Epson.</div>
   </section>
 
+  <div id="colrow" class="hint" hidden style="padding:0 2px"><button class="link" type="button" id="colall">Collapse all printers</button> &nbsp;·&nbsp; <button class="link" type="button" id="expall">Expand all</button></div>
   <div id="lines" class="wrap" style="gap:14px"></div>
 
   <section class="card" aria-label="Totals">
@@ -380,7 +384,8 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   function lineHtml(l){
     var p=DATA[l.key], t=lineTotals(l);
     var h='<article class="card line" data-uid="'+l.uid+'">';
-    h+='<div class="line-head"><div style="min-width:0"><h3>'+esc(p.n)+'</h3><div class="type">'+esc(p.t)+'</div></div><button class="del" type="button" data-act="del" aria-label="Remove '+esc(p.n)+'">×</button></div>';
+    h+='<div class="line-head"><button class="tog" type="button" data-act="tog" aria-expanded="'+(l.col?'false':'true')+'" aria-label="'+(l.col?'Expand ':'Collapse ')+esc(p.n)+'"><span class="chev" aria-hidden="true">'+(l.col?'&#9656;':'&#9662;')+'</span></button><div style="min-width:0;flex:1"><h3>'+esc(p.n)+'</h3><div class="type">'+esc(p.t)+(l.col?' · <span class="mono" data-lts>'+money(t.pr+t.su)+'</span>':'')+'</div></div><button class="del" type="button" data-act="del" aria-label="Remove '+esc(p.n)+'">×</button></div>';
+    h+='<div class="lbody"'+(l.col?' hidden':'')+'>';
     h+='<div class="row" style="grid-template-columns:4.2rem minmax(0,1fr)"><label>Printers<input class="num" type="number" min="1" step="1" data-f="qty" data-top="1" value="'+esc(l.qty)+'"></label><div></div></div>';
     l.toners.forEach(function(sp,i){ h+=supHtml(l,'toner','Toner or ink'+(l.toners.length>1?' '+(i+1):''),p.c,sp,i); });
     h+='<div><button class="link" type="button" data-act="addt">+ Add another toner</button></div>';
@@ -390,7 +395,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     });
     h+='<div><button class="link" type="button" data-act="addx">+ Add another supply (for colour sets, extra bottles, paper)</button></div>';
     if(p.s) h+='<details><summary>Parts on file</summary><p>'+esc(p.s)+'</p></details>';
-    h+='<div class="line-total"><span>Line total</span><span class="mono" data-lt>'+money(t.pr+t.su)+'</span></div></article>';
+    h+='<div class="line-total"><span>Line total</span><span class="mono" data-lt>'+money(t.pr+t.su)+'</span></div></div></article>';
     return h;
   }
   function cpp(l,p,useSell){
@@ -407,11 +412,12 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     var box=$('lines');
     if(!S.lines.length){ box.innerHTML='<div class="card empty">No printers yet. Pick one above to start the quote.</div>'; }
     else box.innerHTML=S.lines.map(lineHtml).join('');
+    $('colrow').hidden=S.lines.length<2;
     totals();
   }
   function totals(){
     var pr=0,su=0;
-    S.lines.forEach(function(l){ var t=lineTotals(l); pr+=t.pr; su+=t.su; var el=document.querySelector('[data-uid="'+l.uid+'"] [data-lt]'); if(el) el.textContent=money(t.pr+t.su); var ce=document.querySelector('[data-uid="'+l.uid+'"] [data-cpp]'); if(ce) ce.textContent=cppTxt(cpp(l,DATA[l.key],false)); });
+    S.lines.forEach(function(l){ var t=lineTotals(l); pr+=t.pr; su+=t.su; var el=document.querySelector('[data-uid="'+l.uid+'"] [data-lt]'); if(el) el.textContent=money(t.pr+t.su); var el2=document.querySelector('[data-uid="'+l.uid+'"] [data-lts]'); if(el2) el2.textContent=money(t.pr+t.su); var ce=document.querySelector('[data-uid="'+l.uid+'"] [data-cpp]'); if(ce) ce.textContent=cppTxt(cpp(l,DATA[l.key],false)); });
     var sub=pr+su, tax=sub*((+S.tax||0)/100);
     $('s-sub').textContent=money(sub); $('s-tax').textContent=money(tax); $('s-tot').textContent=money(sub+tax);
     $('qtext').value=quoteText(pr,su,sub,tax);
@@ -475,10 +481,14 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     else { sp.opt=+el.value; if(sp.opt>=0){ var sv2=savedFor(partKey(list,sp)); sp.price=sv2!=null?sv2:list[sp.opt].p; } else if(sp.opt===-1){ sp.price=null; } }
     save(); render();
   });
+  function setAll(v){ S.lines.forEach(function(l){ l.col=v; }); save(); render(); }
+  $('colall').addEventListener('click',function(){ setAll(true); });
+  $('expall').addEventListener('click',function(){ setAll(false); });
   $('lines').addEventListener('click',function(e){
     var b=e.target.closest('button'); if(!b) return;
     var act=b.getAttribute('data-act'), l=findLine(b); if(!l) return;
-    if(act==='del'){ S.lines=S.lines.filter(function(x){return x!==l;}); }
+    if(act==='tog'){ l.col=!l.col; }
+    else if(act==='del'){ S.lines=S.lines.filter(function(x){return x!==l;}); }
     else if(act==='addt'){ l.toners.push(makeSup(DATA[l.key].c)); }
     else if(act==='delt'){ l.toners.splice(+b.closest('[data-kind]').getAttribute('data-idx'),1); }
     else if(act==='addx'){ l.extras.push({desc:'',qty:1,price:null}); }

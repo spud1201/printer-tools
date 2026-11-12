@@ -68,6 +68,7 @@ button.del{border:0;background:none;color:var(--muted);padding:4px 8px;font-size
 .sum{display:grid;gap:8px}
 .sum .big{font-size:1.4rem;font-weight:800}
 .hint{font-size:.8rem;color:var(--muted)}
+.ovl{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}.dlg{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:12px;max-width:380px;width:100%;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.3)}.dlg p{margin:0 0 14px;line-height:1.4}.dlg .actions{justify-content:flex-end}@media print{.ovl{display:none!important}}
 .savep{margin-top:6px;font-size:.85rem}.savep:empty{display:none}.costl{margin-top:3px;font-size:.78rem;color:var(--muted)}.costl .cost{font-weight:500}.costl .link{font-size:.78rem}.savep .ok{font-weight:600}
 .need{color:var(--warn-ink);font-size:.78rem;font-weight:600}
 details summary{cursor:pointer;color:var(--a-ink);font-size:.82rem;font-weight:600}
@@ -218,6 +219,16 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   var KEY='printer-quote-v2';
   var uid=1;
   var SKIPCONF=false;
+  function yesNo(msg,onYes,onNo){
+    var o=document.createElement('div'); o.className='ovl'; o.setAttribute('role','dialog'); o.setAttribute('aria-modal','true');
+    o.innerHTML='<div class="dlg"><p>'+esc(msg)+'</p><div class="actions"><button type="button" data-v="n">No</button><button type="button" class="primary" data-v="y">Yes</button></div></div>';
+    function done(y){ document.removeEventListener('keydown',key); if(o.parentNode) o.parentNode.removeChild(o); if(y){ if(onYes) onYes(); } else if(onNo) onNo(); }
+    function key(e){ if(e.key==='Escape') done(false); }
+    o.addEventListener('click',function(e){ var v=e.target.getAttribute&&e.target.getAttribute('data-v'); if(v) done(v==='y'); else if(e.target===o) done(false); });
+    document.addEventListener('keydown',key); document.body.appendChild(o);
+    var yb=o.querySelector('[data-v=y]'); if(yb) yb.focus();
+  }
+  var NEWQ_MSG='Start a new quote? The current quote will be deleted unless you have saved it to a client.';
   var S={cust:'',qno:'',qdate:'',qby:'',qco:'',tax:5,lines:[]};
   function today(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   function newNo(){ return 'QT-'+today().replace(/-/g,'')+'-'+String(Math.floor(Math.random()*900)+100); }
@@ -625,11 +636,14 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     }).catch(function(){});
     $('clsel').addEventListener('change',function(){
       if(this.value==='__new'){
-        if((S.lines.length||S.cust)&&!window.confirm('Start a new quote? The current quote will be deleted unless you have saved it to a client.')){ this.value=CUR||''; return; }
-        CUR=''; try{ localStorage.setItem(clKey(),''); }catch(e){}
-        SKIPCONF=true; $('clear').click(); SKIPCONF=false; clRender();
-        clMsg('New quote started. Type the customer name, add printers, then press Save to client.');
-        try{ $('cust').focus(); }catch(e){}
+        var sel=this;
+        var go=function(){
+          CUR=''; try{ localStorage.setItem(clKey(),''); }catch(e){}
+          SKIPCONF=true; $('clear').click(); SKIPCONF=false; clRender();
+          clMsg('New quote started. Type the customer name, add printers, then press Save to client.');
+          try{ $('cust').focus(); }catch(e){}
+        };
+        if(S.lines.length||S.cust) yesNo(NEWQ_MSG,go,function(){ sel.value=CUR||''; }); else go();
         return;
       }
       CUR=this.value; try{ localStorage.setItem(clKey(),CUR); }catch(e){}
@@ -714,10 +728,12 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       function fb(){ t.removeAttribute('readonly'); t.select(); try{ document.execCommand('copy'); ok(); }catch(e){ msg.textContent='Select the text above and copy it.'; } t.setAttribute('readonly',''); }
       if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t.value).then(ok,fb); } else fb();
     });
-    $('clear').addEventListener('click',function(){
-      if(!SKIPCONF&&(S.lines.length||S.cust)&&!window.confirm('Start a new quote? The current quote will be deleted unless you have saved it to a client.')) return;
+    function doClear(){
       S={cust:'',qno:newNo(),qdate:today(),qby:S.qby||'',qco:S.qco||'',tax:S.tax,lines:[]}; save();
       $('cust').value=''; $('qno').value=S.qno; $('qdate').value=S.qdate; render(); $('copymsg').textContent='';
+    }
+    $('clear').addEventListener('click',function(){
+      if(!SKIPCONF&&(S.lines.length||S.cust)) yesNo(NEWQ_MSG,doClear); else doClear();
     });
     if(!S.lines.length){ var ex=null; DATA.forEach(function(p){ if(p.m==='HL-L2405W') ex=p; }); if(ex){ addLine(ex); $('pickmsg').textContent='Example printer added. Remove it with the × button.'; return; } }
     render();

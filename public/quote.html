@@ -713,6 +713,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t.value).then(ok,fb); } else fb();
     });
     $('clear').addEventListener('click',function(){
+      if((S.lines.length||S.cust)&&!window.confirm('Start a new quote? The current quote will be deleted unless you have saved it to a client.')) return;
       S={cust:'',qno:newNo(),qdate:today(),qby:S.qby||'',qco:S.qco||'',tax:S.tax,lines:[]}; save();
       $('cust').value=''; $('qno').value=S.qno; $('qdate').value=S.qdate; render(); $('copymsg').textContent='';
     });

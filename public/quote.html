@@ -139,6 +139,7 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
     <h2 class="coll"><button type="button" id="qdtoggle" aria-expanded="true" aria-controls="qdbody"><span>Quote details</span><span class="qdsum" id="qdsum"></span><span class="chev" aria-hidden="true">&#9662;</span></button></h2>
     <div class="grid" id="qdbody">
       <label>Customer<input id="cust" type="text" autocomplete="off" placeholder="Company or contact"></label>
+      <label class="full">Customer address (optional, shown on the quote)<input id="caddr" type="text" maxlength="300" autocomplete="off" placeholder="Street, city, province, postal code"></label>
       <label>Quote number<input id="qno" type="text" autocomplete="off"></label>
       <label>Date<input id="qdate" type="date"></label>
       <label>Prepared by<input id="qby" type="text" autocomplete="off" placeholder="Your name"></label>
@@ -229,7 +230,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     var yb=o.querySelector('[data-v=y]'); if(yb) yb.focus();
   }
   var NEWQ_MSG='Start a new quote? The current quote will be deleted unless you have saved it to a client.';
-  var S={cust:'',qno:'',qdate:'',qby:'',qco:'',tax:5,lines:[]};
+  var S={cust:'',caddr:'',qno:'',qdate:'',qby:'',qco:'',tax:5,lines:[]};
   function today(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   function newNo(){ return 'QT-'+today().replace(/-/g,'')+'-'+String(Math.floor(Math.random()*900)+100); }
   function load(){ try{ var r=localStorage.getItem(KEY); if(r){ var o=JSON.parse(r); if(o&&o.lines){ S=o; S.lines.forEach(function(l){ uid=Math.max(uid,l.uid+1); if(!l.toners) l.toners=l.toner?[l.toner]:[]; }); } } }catch(e){} }
@@ -519,7 +520,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   function buildPrint(sub,tax){
     var h='<div class="pd">'+(LOGO?'<img class="logo" src="'+esc(LOGO)+'" alt="">':'')+'<h1>Quote'+(S.qno?' <span class="qn">'+esc(S.qno)+'</span>':'')+'</h1>';
     if(S.qco) h+='<p class="co">'+esc(S.qco)+'</p>';
-    h+='<div class="meta"><div>Date: '+esc(S.qdate||'')+'</div><div>Customer: '+esc(S.cust||'')+'</div><div>Prepared by: '+esc(S.qby||'')+'</div></div>';
+    h+='<div class="meta"><div>Date: '+esc(S.qdate||'')+'</div><div>Customer: '+esc(S.cust||'')+(S.caddr?'<br>'+esc(S.caddr):'')+'</div><div>Prepared by: '+esc(S.qby||'')+'</div></div>';
     h+='<table><thead><tr><th>Item</th><th class="n">Qty</th><th class="n">Unit price</th><th class="n">Amount</th></tr></thead><tbody>';
     S.lines.forEach(function(l){
       var p=DATA[l.key];
@@ -539,6 +540,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     var o=[]; o.push('QUOTE '+(S.qno||''));
     if(S.qdate) o.push('Date: '+S.qdate);
     if(S.cust) o.push('Customer: '+S.cust);
+    if(S.caddr) o.push('Address: '+S.caddr);
     if(S.qby) o.push('Prepared by: '+S.qby);
     o.push('');
     S.lines.forEach(function(l,ix){
@@ -649,12 +651,16 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       clApi('PUT','',{id:id,name:CL[id].name,tool:TOOL,state:snap}).then(function(){ CL[id][TOOL]=snap; clMsg('Saved to '+CL[id].name+'.'); }).catch(function(){ clMsg('Could not auto-save. Press Save to client to try again.'); });
     },1200);
   };
+  function addrFill(){
+    var c=CUR&&CL[CUR]; if(!c||S.caddr||(S.cust||'').trim()!==c.name) return;
+    var a=c.contact&&c.contact.address; if(a){ S.caddr=a; $('caddr').value=a; save(); render(); }
+  }
   function initClients(){
     try{ var v=localStorage.getItem('printer-client-auto'); $('clauto').checked=(v!=='0'); }catch(e){ $('clauto').checked=true; }
     $('clauto').addEventListener('change',function(){ try{ localStorage.setItem('printer-client-auto',this.checked?'1':'0'); }catch(e){} clMsg(this.checked?'Changes will save to the selected client.':'Auto-save is off. Press Save to client when you want to save.'); if(this.checked) window.clAuto(); });
     clApi('GET').then(function(j){
       CL=j.clients||{}; try{ CUR=localStorage.getItem(clKey())||''; }catch(e){}
-      $('clientcard').hidden=false; clRender(); render();
+      $('clientcard').hidden=false; clRender(); addrFill(); render();
       try{
         var op=localStorage.getItem('printer-client-open')||''; localStorage.removeItem('printer-client-open');
         var pr=op.split(':'); if(pr[0]===TOOL&&CL[pr[1]]){ $('clsel').value=pr[1]; $('clsel').dispatchEvent(new Event('change')); }
@@ -670,7 +676,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       $('cldel').hidden=!CUR; if(!CUR){ clMsg('No client selected. The quote below is not tied to a client.'); render(); return; }
       var c=CL[CUR];
       if(c[TOOL]){ try{ localStorage.setItem(KEY,JSON.stringify(c[TOOL])); }catch(e){} location.reload(); return; }
-      S.cust=c.name; save(); $('cust').value=c.name; totals(); render();
+      S.cust=c.name; S.caddr=(c.contact&&c.contact.address)||''; $('caddr').value=S.caddr; save(); $('cust').value=c.name; totals(); render();
       clMsg('No quote saved for '+c.name+' in this tool yet. Add printers, then press Save to client.');
     });
     $('clsave').addEventListener('click',function(){
@@ -696,7 +702,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   function init(){
     load();
     if(!S.qno) S.qno=newNo(); if(!S.qdate) S.qdate=today();
-    fill('cust','cust'); fill('qno','qno'); fill('qdate','qdate'); fill('qby','qby'); fill('qco','qco');
+    fill('cust','cust'); fill('caddr','caddr'); fill('qno','qno'); fill('qdate','qdate'); fill('qby','qby'); fill('qco','qco');
     $('taxp').value=S.tax; $('taxp').addEventListener('input',function(){ S.tax=this.value; save(); totals(); });
     
     function sNorm(s){ return String(s==null?'':s).toLowerCase().replace(/[^a-z0-9]/g,''); }
@@ -752,7 +758,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t.value).then(ok,fb); } else fb();
     });
     function doClear(){
-      S={cust:'',qno:newNo(),qdate:today(),qby:S.qby||'',qco:S.qco||'',tax:S.tax,lines:[]}; save();
+      S={cust:'',caddr:'',qno:newNo(),qdate:today(),qby:S.qby||'',qco:S.qco||'',tax:S.tax,lines:[]}; save();
       $('cust').value=''; $('qno').value=S.qno; $('qdate').value=S.qdate; render(); $('copymsg').textContent='';
     }
     CLEARFN=doClear;

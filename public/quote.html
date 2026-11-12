@@ -218,7 +218,6 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   });
   var KEY='printer-quote-v2';
   var uid=1;
-  var SKIPCONF=false;
   function yesNo(msg,onYes,onNo){
     var o=document.createElement('div'); o.className='ovl'; o.setAttribute('role','dialog'); o.setAttribute('aria-modal','true');
     o.innerHTML='<div class="dlg"><p>'+esc(msg)+'</p><div class="actions"><button type="button" data-v="n">No</button><button type="button" class="primary" data-v="y">Yes</button></div></div>';
@@ -606,6 +605,14 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   function clKey(){ return 'printer-client-'+TOOL; }
   function clApi(method,path,body){ return fetch('/api/clients'+(path||''),{method:method,headers:{'content-type':'application/json',accept:'application/json'},body:body?JSON.stringify(body):undefined}).then(function(r){ if(!r.ok) throw 0; return r.json(); }); }
   function clMsg(t){ $('clmsg').textContent=t; }
+  var CLEARFN=null;
+  function startNew(){
+    CUR=''; try{ localStorage.setItem(clKey(),''); }catch(e){}
+    if(CLEARFN) CLEARFN();
+    clRender();
+    clMsg('New quote started. Type the customer name, add printers, then press Save to client.');
+    try{ $('cust').focus(); }catch(e){}
+  }
   function clRender(){
     var ids=Object.keys(CL).sort(function(a,b){ return CL[a].name.toLowerCase()<CL[b].name.toLowerCase()?-1:1; });
     var h='<option value="">No client selected</option><option value="__new">+ New client quote (clears this quote)</option>';
@@ -637,13 +644,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     $('clsel').addEventListener('change',function(){
       if(this.value==='__new'){
         var sel=this;
-        var go=function(){
-          CUR=''; try{ localStorage.setItem(clKey(),''); }catch(e){}
-          SKIPCONF=true; $('clear').click(); SKIPCONF=false; clRender();
-          clMsg('New quote started. Type the customer name, add printers, then press Save to client.');
-          try{ $('cust').focus(); }catch(e){}
-        };
-        if(S.lines.length||S.cust) yesNo(NEWQ_MSG,go,function(){ sel.value=CUR||''; }); else go();
+        if(S.lines.length||S.cust) yesNo(NEWQ_MSG,startNew,function(){ sel.value=CUR||''; }); else startNew();
         return;
       }
       CUR=this.value; try{ localStorage.setItem(clKey(),CUR); }catch(e){}
@@ -732,8 +733,9 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       S={cust:'',qno:newNo(),qdate:today(),qby:S.qby||'',qco:S.qco||'',tax:S.tax,lines:[]}; save();
       $('cust').value=''; $('qno').value=S.qno; $('qdate').value=S.qdate; render(); $('copymsg').textContent='';
     }
+    CLEARFN=doClear;
     $('clear').addEventListener('click',function(){
-      if(!SKIPCONF&&(S.lines.length||S.cust)) yesNo(NEWQ_MSG,doClear); else doClear();
+      if(S.lines.length||S.cust) yesNo(NEWQ_MSG,startNew); else startNew();
     });
     if(!S.lines.length){ var ex=null; DATA.forEach(function(p){ if(p.m==='HL-L2405W') ex=p; }); if(ex){ addLine(ex); $('pickmsg').textContent='Example printer added. Remove it with the × button.'; return; } }
     render();

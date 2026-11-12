@@ -91,7 +91,7 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
   .wrap{display:none!important}
   #savedcard{display:none!important}
   .printdoc{display:block!important}
-  .pd h1{font-size:20pt;margin:0 0 4pt}
+  .pd h1{font-size:20pt;margin:0 0 4pt}.pd h1 .qn{font-size:11pt;font-weight:400;color:#555;margin-left:6pt}
   .pd img.logo{display:block;max-height:22mm;max-width:60mm;margin:0 0 8pt}
   .pd .co{white-space:pre-line;margin:0 0 10pt;font-size:10pt}
   .pd .meta{display:grid;grid-template-columns:1fr 1fr;gap:2pt 16pt;margin:0 0 12pt;font-size:10pt}
@@ -488,7 +488,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     buildPrint(sub,tax);
   }
   function buildPrint(sub,tax){
-    var h='<div class="pd">'+(LOGO?'<img class="logo" src="'+esc(LOGO)+'" alt="">':'')+'<h1>Quote '+esc(S.qno||'')+'</h1>';
+    var h='<div class="pd">'+(LOGO?'<img class="logo" src="'+esc(LOGO)+'" alt="">':'')+'<h1>Quote'+(S.qno?' <span class="qn">'+esc(S.qno)+'</span>':'')+'</h1>';
     if(S.qco) h+='<p class="co">'+esc(S.qco)+'</p>';
     h+='<div class="meta"><div>Date: '+esc(S.qdate||'')+'</div><div>Customer: '+esc(S.cust||'')+'</div><div>Prepared by: '+esc(S.qby||'')+'</div></div>';
     h+='<table><thead><tr><th>Item</th><th class="n">Qty</th><th class="n">Unit price</th><th class="n">Amount</th></tr></thead><tbody>';

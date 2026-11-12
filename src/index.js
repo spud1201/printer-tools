@@ -3,6 +3,7 @@
 
 const MAX_KEYS = 3500;
 const MAX_CLIENTS = 150;
+const MAX_QUOTES = 20;
 const MAX_CLIENT_PRICES = 200;
 const MAX_STATE = 60000;
 let certCache = null;
@@ -196,7 +197,25 @@ export default {
         }
         if (body.tool === 'quote' || body.tool === 'margin') {
           if (!body.state || typeof body.state !== 'object' || JSON.stringify(body.state).length > MAX_STATE) return json({ error: 'quote too large' }, 400);
+          if (body.tool === 'quote' && typeof body.qid === 'string' && /^q[a-z0-9]{1,24}$/.test(body.qid) && !rec.quotes && rec.quote && typeof rec.quote === 'object') {
+            rec.quotes = {};
+            const lq = rec.quote.qid || 'q0';
+            if (lq !== body.qid) { rec.quote.qid = lq; rec.quotes[lq] = rec.quote; }
+          }
           rec[body.tool] = body.state;
+          if (body.tool === 'quote' && typeof body.qid === 'string' && /^q[a-z0-9]{1,24}$/.test(body.qid)) {
+            rec.quotes = rec.quotes || {};
+            if (!(body.qid in rec.quotes) && Object.keys(rec.quotes).length >= MAX_QUOTES) return json({ error: 'too many quotes for this client' }, 400);
+            rec.quotes[body.qid] = body.state;
+          }
+        }
+        if (typeof body.delq === 'string' && !(rec.quotes && Object.keys(rec.quotes).length) && rec.quote && (rec.quote.qid || 'q0') === body.delq) delete rec.quote;
+        if (typeof body.delq === 'string' && rec.quotes && body.delq in rec.quotes) {
+          delete rec.quotes[body.delq];
+          if (rec.quote && rec.quote.qid === body.delq) {
+            const left = Object.values(rec.quotes).sort((x, y) => (y.ts || 0) - (x.ts || 0));
+            if (left.length) rec.quote = left[0]; else delete rec.quote;
+          }
         }
         all[id] = rec;
         await env.PRICES.put(ck, JSON.stringify(all));

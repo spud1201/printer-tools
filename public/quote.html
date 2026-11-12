@@ -129,9 +129,10 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
     <h2>Client</h2>
     <div class="grid">
       <label class="full">Saved clients<select id="clsel"></select></label>
+      <label class="full" id="qrow" hidden>Quotes for this client<select id="qsel"></select></label>
     </div>
     <label class="chk" style="display:flex;align-items:center;gap:8px;flex-direction:row;font-size:.95rem;color:var(--ink)"><input id="clauto" type="checkbox" style="width:1.2rem;height:1.2rem;flex:none"> Save printers to this client as I work</label>
-    <div class="actions"><button id="clsave" class="primary" type="button">Save to client</button><button id="cldel" type="button" hidden>Delete client</button></div>
+    <div class="actions"><button id="clsave" class="primary" type="button">Save to client</button><button id="qdel" type="button" hidden>Delete this quote</button><button id="cldel" type="button" hidden>Delete client</button></div>
     <div class="hint" id="clmsg">Saved to your login, so only you see your clients. Saving uses the Customer name below. Select a client to see a Save for button under each price, which saves a price for that customer only.</div>
   </section>
 
@@ -230,8 +231,9 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     var yb=o.querySelector('[data-v=y]'); if(yb) yb.focus();
   }
   var NEWQ_MSG='Start a new quote? The current quote will be deleted unless you have saved it to a client.';
-  var S={cust:'',caddr:'',qno:'',qdate:'',qby:'',qco:'',tax:5,lines:[]};
+  var S={cust:'',caddr:'',qid:'',qno:'',qdate:'',qby:'',qco:'',tax:5,lines:[]};
   function today(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function newQid(){ return 'q'+Date.now().toString(36)+Math.floor(Math.random()*1296).toString(36); }
   function newNo(){ return 'QT-'+today().replace(/-/g,'')+'-'+String(Math.floor(Math.random()*900)+100); }
   function load(){ try{ var r=localStorage.getItem(KEY); if(r){ var o=JSON.parse(r); if(o&&o.lines){ S=o; S.lines.forEach(function(l){ uid=Math.max(uid,l.uid+1); if(!l.toners) l.toners=l.toner?[l.toner]:[]; }); } } }catch(e){} }
   function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} if(window.clAuto) window.clAuto(); }
@@ -634,11 +636,35 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     try{ window.scrollTo(0,0); }catch(e){}
     try{ $('cust').focus({preventScroll:true}); }catch(e){}
   }
+  function quotesOf(c){
+    var l=[]; if(c&&c.quotes) Object.keys(c.quotes).forEach(function(k){ var q=c.quotes[k]; if(q&&!q.qid) q.qid=k; if(q) l.push(q); });
+    else if(c&&c[TOOL]){ var q0=c[TOOL]; if(!q0.qid) q0.qid='q0'; l.push(q0); }
+    return l.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+  }
+  function cacheQ(id,snap){
+    var rec=CL[id]; if(!rec) return; snap.qid=snap.qid||S.qid;
+    if(!rec.quotes){ rec.quotes={}; var lg=rec[TOOL]; if(lg){ lg.qid=lg.qid||'q0'; if(lg.qid!==snap.qid) rec.quotes[lg.qid]=lg; } }
+    rec[TOOL]=snap; rec.quotes[snap.qid]=snap;
+  }
+  function qRender(){
+    var c=CUR&&CL[CUR]; $('qrow').hidden=!c; $('qdel').hidden=!c; if(!c) return;
+    var l=quotesOf(c), h='', here=false;
+    l.forEach(function(q){ var on=q.qid===S.qid; if(on) here=true; h+='<option value="'+esc(q.qid)+'"'+(on?' selected':'')+'>'+esc((q.qno||'Quote')+(q.qdate?' · '+q.qdate:'')+' · '+((q.lines||[]).length)+' printer'+((q.lines||[]).length===1?'':'s'))+'</option>'; });
+    if(!here) h='<option value="" selected>'+esc((S.qno||'This quote')+' (not saved yet)')+'</option>'+h;
+    h+='<option value="__newq">+ New quote for '+esc(c.name)+'</option>';
+    $('qsel').innerHTML=h;
+  }
+  function flushQ(){
+    clearTimeout(autoT);
+    var id=CUR; if(!id||!CL[id]||(S.cust||'').trim()!==CL[id].name) return Promise.resolve();
+    var snap=JSON.parse(JSON.stringify(S)); snap.ts=Date.now();
+    return clApi('PUT','',{id:id,name:CL[id].name,tool:TOOL,qid:snap.qid,state:snap}).then(function(){ cacheQ(id,snap); });
+  }
   function clRender(){
     var ids=Object.keys(CL).sort(function(a,b){ return CL[a].name.toLowerCase()<CL[b].name.toLowerCase()?-1:1; });
     var h='<option value="">No client selected</option><option value="__new">+ New client quote (clears this quote)</option>';
     ids.forEach(function(id){ h+='<option value="'+esc(id)+'"'+(id===CUR?' selected':'')+'>'+esc(CL[id].name)+(CL[id][TOOL]?'':' (no quote here yet)')+'</option>'; });
-    $('clsel').innerHTML=h; if(!CL[CUR]) CUR=''; $('clsel').value=CUR; $('cldel').hidden=!CUR;
+    $('clsel').innerHTML=h; if(!CL[CUR]) CUR=''; $('clsel').value=CUR; $('cldel').hidden=!CUR; qRender();
   }
   var autoT=null;
   function autoOn(){ return $('clauto')&&$('clauto').checked; }
@@ -647,8 +673,8 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     if((S.cust||'').trim()!==CL[CUR].name) return;
     clearTimeout(autoT);
     autoT=setTimeout(function(){
-      var id=CUR; if(!CL[id]) return; var snap=JSON.parse(JSON.stringify(S));
-      clApi('PUT','',{id:id,name:CL[id].name,tool:TOOL,state:snap}).then(function(){ CL[id][TOOL]=snap; clMsg('Saved to '+CL[id].name+'.'); }).catch(function(){ clMsg('Could not auto-save. Press Save to client to try again.'); });
+      var id=CUR; if(!CL[id]) return; var snap=JSON.parse(JSON.stringify(S)); snap.ts=Date.now();
+      clApi('PUT','',{id:id,name:CL[id].name,tool:TOOL,qid:snap.qid,state:snap}).then(function(){ cacheQ(id,snap); qRender(); clMsg('Saved to '+CL[id].name+'.'); }).catch(function(){ clMsg('Could not auto-save. Press Save to client to try again.'); });
     },1200);
   };
   function addrFill(){
@@ -675,7 +701,8 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       CUR=this.value; try{ localStorage.setItem(clKey(),CUR); }catch(e){}
       $('cldel').hidden=!CUR; if(!CUR){ clMsg('No client selected. The quote below is not tied to a client.'); render(); return; }
       var c=CL[CUR];
-      if(c[TOOL]){ try{ localStorage.setItem(KEY,JSON.stringify(c[TOOL])); }catch(e){} location.reload(); return; }
+      var ql=quotesOf(c);
+      if(ql.length){ try{ localStorage.setItem(KEY,JSON.stringify(ql[0])); }catch(e){} location.reload(); return; }
       S.cust=c.name; S.caddr=(c.contact&&c.contact.address)||''; $('caddr').value=S.caddr; save(); $('cust').value=c.name; totals(); render();
       clMsg('No quote saved for '+c.name+' in this tool yet. Add printers, then press Save to client.');
     });
@@ -687,11 +714,45 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       else Object.keys(CL).forEach(function(k){ if(CL[k].name.toLowerCase()===name.toLowerCase()) id=k; });
       var fresh=!id; if(!id) id='c'+Date.now().toString(36)+Math.floor(Math.random()*1296).toString(36);
       clMsg('Saving...');
-      clApi('PUT','',{id:id,name:name,tool:TOOL,state:S}).then(function(){
-        var rec=CL[id]||{}; rec.name=CL[id]?CL[id].name:name; rec[TOOL]=JSON.parse(JSON.stringify(S)); CL[id]=rec; CUR=id;
+      var snap0=JSON.parse(JSON.stringify(S)); snap0.ts=Date.now();
+      clApi('PUT','',{id:id,name:name,tool:TOOL,qid:snap0.qid,state:snap0}).then(function(){
+        var rec=CL[id]||{}; rec.name=CL[id]?CL[id].name:name; CL[id]=rec; CUR=id; cacheQ(id,snap0);
         try{ localStorage.setItem(clKey(),CUR); }catch(e){}
         clRender(); clMsg((fresh?'New client saved: ':'Saved to ')+name+'.');
       }).catch(function(){ clMsg('Could not save. Check your connection and try again.'); });
+    });
+    function goQuote(q){ try{ localStorage.setItem(KEY,JSON.stringify(q)); }catch(e){} location.reload(); }
+    function freshFor(c){
+      CLEARFN(); S.cust=c.name; S.caddr=(c.contact&&c.contact.address)||''; S.qid=newQid();
+      $('cust').value=S.cust; $('caddr').value=S.caddr; save(); render(); qRender(); try{ window.scrollTo(0,0); }catch(e){}
+      clMsg('New quote for '+c.name+'. Add printers; it saves to this client as you work.');
+    }
+    $('qsel').addEventListener('change',function(){
+      var v=this.value, c=CL[CUR]; if(!c){ return; }
+      if(v===''){ return; }
+      function go(){
+        flushQ().catch(function(){}).then(function(){
+          if(v==='__newq') freshFor(c);
+          else { var q=quotesOf(c).filter(function(x){ return x.qid===v; })[0]; if(q) goQuote(q); else qRender(); }
+        });
+      }
+      if(autoOn()) go(); else yesNo('Auto-save is off, so unsaved changes to this quote will be lost. Switch anyway?',go,function(){ qRender(); });
+    });
+    $('qdel').addEventListener('click',function(){
+      var c=CL[CUR]; if(!c) return; var qid=S.qid, saved=quotesOf(c).some(function(x){ return x.qid===qid; });
+      yesNo('Delete this quote ('+(S.qno||'Quote')+') from '+c.name+'? This cannot be undone.',function(){
+        clearTimeout(autoT);
+        function after(){
+          var rest=quotesOf(c).filter(function(x){ return x.qid!==qid; });
+          if(rest.length) goQuote(rest[0]); else freshFor(c);
+        }
+        if(!saved){ after(); return; }
+        clApi('PUT','',{id:CUR,name:c.name,delq:qid}).then(function(){
+          if(c.quotes) delete c.quotes[qid];
+          if(c[TOOL]&&(c[TOOL].qid||'q0')===qid){ var r2=quotesOf({quotes:c.quotes||{}}); if(r2.length) c[TOOL]=r2[0]; else delete c[TOOL]; }
+          after();
+        }).catch(function(){ clMsg('Could not delete the quote. Try again.'); });
+      });
     });
     $('cldel').addEventListener('click',function(){
       if(!CUR||!CL[CUR]) return; var n=CL[CUR].name;
@@ -701,7 +762,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   }
   function init(){
     load();
-    if(!S.qno) S.qno=newNo(); if(!S.qdate) S.qdate=today();
+    if(!S.qno) S.qno=newNo(); if(!S.qdate) S.qdate=today(); if(!S.qid) S.qid=newQid();
     fill('cust','cust'); fill('caddr','caddr'); fill('qno','qno'); fill('qdate','qdate'); fill('qby','qby'); fill('qco','qco');
     $('taxp').value=S.tax; $('taxp').addEventListener('input',function(){ S.tax=this.value; save(); totals(); });
     
@@ -758,14 +819,14 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t.value).then(ok,fb); } else fb();
     });
     function doClear(){
-      S={cust:'',caddr:'',qno:newNo(),qdate:today(),qby:S.qby||'',qco:S.qco||'',tax:S.tax,lines:[]}; save();
-      $('cust').value=''; $('qno').value=S.qno; $('qdate').value=S.qdate; render(); $('copymsg').textContent='';
+      S={cust:'',caddr:'',qid:newQid(),qno:newNo(),qdate:today(),qby:S.qby||'',qco:S.qco||'',tax:S.tax,lines:[]}; save();
+      $('cust').value=''; $('caddr').value=''; $('qno').value=S.qno; $('qdate').value=S.qdate; render(); $('copymsg').textContent='';
     }
     CLEARFN=doClear;
     $('clear').addEventListener('click',function(){
       if(S.lines.length||S.cust) yesNo(NEWQ_MSG,startNew); else startNew();
     });
-    if(!S.lines.length){ var ex=null; DATA.forEach(function(p){ if(p.m==='HL-L2405W') ex=p; }); if(ex){ addLine(ex); $('pickmsg').textContent='Example printer added. Remove it with the × button.'; return; } }
+    if(!S.lines.length&&!S.cust){ var ex=null; DATA.forEach(function(p){ if(p.m==='HL-L2405W') ex=p; }); if(ex){ addLine(ex); $('pickmsg').textContent='Example printer added. Remove it with the × button.'; return; } }
     render();
   }
   init();

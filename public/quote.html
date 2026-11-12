@@ -360,7 +360,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     var h='';
     if(same) h+='<option value="-3">Same as above</option>';
     if(none) h+='<option value="-2"'+(sp.opt===-2?' selected':'')+'>'+(nlabel||'None')+'</option>';
-    list.forEach(function(x,i){ h+='<option value="'+i+'"'+(sp.opt===i?' selected':'')+'>'+(x.ph?'Compatible: ':'')+esc(x.t)+(x.y?' · '+x.y.toLocaleString('en-US')+' pg':'')+(x.p!=null?' · '+money(x.p):'')+'</option>'; });
+    list.forEach(function(x,i){ h+='<option value="'+i+'"'+(sp.opt===i?' selected':'')+'>'+(x.ph?'Compatible: ':'')+esc(x.t)+(x.y?' · '+x.y.toLocaleString('en-US')+' pg':'')+'</option>'; });
     h+='<option value="-1"'+(sp.opt===-1?' selected':'')+'>Other part number</option>';
     return h;
   }

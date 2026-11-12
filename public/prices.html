@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My Prices</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column. Quote details, add-a-printer search, one card per printer line with its toner and drum, totals, then plain-text quote to copy. */
+:root{
+  --bg:#F2F4F8; --surface:#FFFFFF; --ink:#121927; --muted:#566275; --line:#D8DEE8; --track:#E4E9F1;
+  --a:#2A59D6; --a-ink:#2A59D6; --on-a:#FFFFFF; --warn-bg:#FFF1DD; --warn-ink:#8A4B00; --ok-ink:#17703A; --danger:#B3261E;
+  --font-display:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-data:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D121B; --surface:#151C28; --ink:#E9EDF4; --muted:#9AA6B8; --line:#263142; --track:#222C3B;
+    --a:#6F98FF; --a-ink:#8CAEFF; --on-a:#0D121B; --warn-bg:#3A2A10; --warn-ink:#F5C57A; --ok-ink:#6FD39A; --danger:#FF8A80; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D121B; --surface:#151C28; --ink:#E9EDF4; --muted:#9AA6B8; --line:#263142; --track:#222C3B;
+  --a:#6F98FF; --a-ink:#8CAEFF; --on-a:#0D121B; --warn-bg:#3A2A10; --warn-ink:#F5C57A; --ok-ink:#6FD39A; --danger:#FF8A80; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-display);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;
+  padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:46rem;margin:0 auto;display:grid;gap:14px}
+h1{margin:0;font-size:1.5rem;line-height:1.1;font-weight:800;font-stretch:112%;letter-spacing:-.01em}
+h2{margin:0;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sub{margin:.35rem 0 0;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:12px;min-width:0}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.full{grid-column:1/-1}
+label{display:grid;gap:4px;font-size:.8rem;color:var(--muted);font-weight:600;min-width:0}
+input,select,textarea,button{font:inherit;color:inherit}
+input[type=text],input[type=number],input[type=search],input[type=date],select,textarea{width:100%;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;color:var(--ink);font-size:16px}
+input.num{font-family:var(--font-data);text-align:right}
+textarea{resize:vertical;font-family:var(--font-data);font-size:.82rem;line-height:1.5;min-height:15rem}
+:focus-visible{outline:2px solid var(--a);outline-offset:2px}
+button{cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 12px;font-weight:600;font-size:.9rem}
+button.primary{background:var(--a);color:var(--on-a);border-color:var(--a)}
+button.link{border:0;background:none;padding:4px 0;color:var(--a-ink);font-size:.85rem}
+button.del{border:0;background:none;color:var(--muted);padding:4px 8px;font-size:1.2rem;line-height:1}
+.add{display:grid;gap:8px;grid-template-columns:minmax(0,1fr) auto}
+.line{display:grid;gap:10px}
+.line-head{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.line-head h3{margin:0;font-size:1.05rem;line-height:1.2;font-weight:700;min-width:0;overflow-wrap:anywhere}
+.type{color:var(--muted);font-size:.85rem}
+.tag{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:6px;padding:2px 6px;background:var(--warn-bg);color:var(--warn-ink);margin-left:6px;vertical-align:middle}
+.sec{border-top:1px solid var(--line);padding-top:10px;display:grid;gap:8px}
+.sec-t{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.row{display:grid;gap:8px;grid-template-columns:minmax(0,1fr) 4.2rem 6.6rem;align-items:end}
+.row.has-part{grid-template-columns:minmax(0,1fr) 4.2rem 6.6rem}
+.tot{display:flex;justify-content:space-between;gap:10px;font-family:var(--font-data);font-size:.9rem}
+.tot b{font-weight:500}
+.line-total{display:flex;justify-content:space-between;border-top:1px solid var(--line);padding-top:10px;font-weight:700}
+.mono{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+.sum{display:grid;gap:8px}
+.sum .big{font-size:1.4rem;font-weight:800}
+.hint{font-size:.8rem;color:var(--muted)}
+.need{color:var(--warn-ink);font-size:.78rem;font-weight:600}
+details summary{cursor:pointer;color:var(--a-ink);font-size:.82rem;font-weight:600}
+details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:var(--muted);overflow-wrap:anywhere}
+.empty{text-align:center;color:var(--muted);padding:22px 8px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:30rem){.grid{grid-template-columns:minmax(0,1fr)}.row{grid-template-columns:minmax(0,1fr) 4rem 6rem}}
+
+.printdoc{display:none}
+.logobox{display:grid;gap:8px}
+.logobox .lt{font-size:.8rem;color:var(--muted);font-weight:600}
+.lrow{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.lprev{min-width:0;max-width:14rem;min-height:3.5rem;display:flex;align-items:center;background:#fff;border:1px dashed var(--line);border-radius:8px;padding:6px 10px}
+.lprev img{max-width:100%;max-height:4.5rem;display:block}
+.lbtns{display:flex;gap:8px;flex-wrap:wrap}
+.srow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;border-top:1px solid var(--line);padding:6px 0;font-size:.9rem}
+.skey{overflow-wrap:anywhere}
+@media print{
+  :root{--bg:#fff;--surface:#fff;--ink:#000;--muted:#444;--line:#999}
+  body{background:#fff;color:#000;padding:0;font-size:11pt}
+  .wrap{display:none!important}
+  #savedcard{display:none!important}
+  .printdoc{display:block!important}
+  .pd h1{font-size:20pt;margin:0 0 4pt}
+  .pd img.logo{display:block;max-height:22mm;max-width:60mm;margin:0 0 8pt}
+  .pd .co{white-space:pre-line;margin:0 0 10pt;font-size:10pt}
+  .pd .meta{display:grid;grid-template-columns:1fr 1fr;gap:2pt 16pt;margin:0 0 12pt;font-size:10pt}
+  .pd table{width:100%;border-collapse:collapse;font-size:10pt}
+  .pd th{text-align:left;border-bottom:1.5pt solid #000;padding:4pt 3pt;font-size:9pt;text-transform:uppercase;letter-spacing:.04em}
+  .pd td{padding:3pt;border-bottom:.5pt solid #bbb;vertical-align:top}
+  .pd td.n,.pd th.n{text-align:right;white-space:nowrap}
+  .pd tr.pr td{font-weight:700;border-top:1pt solid #666;padding-top:7pt}
+  .pd tr.sub td:first-child{padding-left:14pt}
+  .pd tr{break-inside:avoid}
+  .pd .totals{margin:10pt 0 0 auto;width:55%;font-size:11pt}
+  .pd .totals div{display:flex;justify-content:space-between;padding:2pt 0}
+  .pd .totals .gt{font-weight:700;border-top:1.5pt solid #000;margin-top:3pt;padding-top:4pt;font-size:13pt}
+  .pd .fine{margin-top:14pt;font-size:8.5pt;color:#444}
+  @page{margin:14mm}
+}
+.on{color:var(--ok-ink);font-weight:700;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase}
+.sup{display:grid;grid-template-columns:3.6rem minmax(0,1fr) auto;gap:4px 10px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line);font-size:.92rem}
+.sup:first-of-type{border-top:0}
+.sup .k{color:var(--muted);font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+.pnote{display:grid;gap:4px;margin-top:2px;font-size:.8rem}
+.pnprint{display:none}
+@media print{.pnprint{display:block;font-size:10pt;margin-top:4px}}
+.sup .pn{font-family:var(--font-data);font-weight:500;overflow-wrap:anywhere}
+.sup .pr{font-family:var(--font-data);text-align:right;white-space:nowrap}
+.sup .yl{grid-column:2/-1;color:var(--muted);font-size:.82rem}
+@media print{.notesprint:not([hidden]){display:block!important;white-space:pre-wrap;border-top:1px solid #999;padding-top:8px;margin-top:10px}body{background:#fff}.noprint{display:none!important}}
+.add{grid-template-columns:minmax(0,1fr) auto auto!important}
+.arrow{min-width:44px;padding:9px 0;font-size:1rem;line-height:1}
+.sugg{max-height:15rem;overflow-y:auto;overscroll-behavior:contain;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.sugg button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:12px;min-height:44px;font-weight:500;overflow-wrap:anywhere}
+.sugg button:last-child{border-bottom:0}
+.sugg .none{padding:12px;color:var(--muted);font-size:.9rem}
+
+.nav{display:flex;gap:12px;font-size:.85rem}
+a.back{color:var(--a-ink);font-size:.85rem;text-decoration:none}
+.cust{display:grid;gap:8px}
+.cust h3{margin:0;font-size:1.05rem;line-height:1.2;font-weight:700;overflow-wrap:anywhere}
+.cust .ln{font-size:.88rem;color:var(--muted);overflow-wrap:anywhere}
+.cust .ln a{color:var(--a-ink)}
+.cust .nt{font-size:.85rem;white-space:pre-wrap;overflow-wrap:anywhere;max-height:5.5rem;overflow:hidden}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btns button,.btns a{font-size:.82rem;padding:7px 10px}
+a.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;font-weight:600;text-decoration:none;color:var(--ink)}
+button.dng{color:var(--danger)}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button[aria-pressed=true]{background:var(--a);color:var(--on-a);border-color:var(--a)}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tags .tag{margin-left:0;background:var(--track);color:var(--muted)}
+h2.coll{width:100%}
+h2.coll button{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:8px;cursor:pointer;min-height:24px}
+h2.coll button:focus-visible{outline:2px solid var(--a,#1f6feb);outline-offset:3px;border-radius:4px}
+h2.coll .chev{margin-left:auto;transition:transform .15s}
+h2.coll button[aria-expanded=false] .chev{transform:rotate(-90deg)}
+.gh{font-weight:700;font-size:.9rem;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <a class="back" href="index.html">&larr; All tools</a> &nbsp;·&nbsp; <a class="back" href="quote.html">Quote Builder</a> &nbsp;·&nbsp; <a class="back" href="/cdn-cgi/access/logout">Sign out</a>
+    <h1 style="margin-top:6px">My Prices</h1>
+    <p class="sub">Your saved selling prices and private costs. Saved to your login (<span id="saveduser"></span>), so they follow you to any device. Costs never show on a customer quote.</p>
+  </div>
+  <section class="card" aria-label="Import a price list">
+    <h2>Import a price list</h2>
+<div class="impbox" style="margin:10px 0;padding:12px;border:1px dashed var(--line);border-radius:10px">
+      <b>Import a price list</b>
+      <div class="hint">Upload an Excel (.xlsx, .xls) or .csv file with a part number column and a price column (headers such as Part Number and Price work best). Matching toner and drum numbers get your price on every quote.<br>Need a template? Download the part number list: <a href="price-list-oem.xlsx" download>OEM parts (.xlsx)</a> or <a href="price-list-compatible.xlsx" download>compatible parts (.xlsx)</a>. Fill in the yellow Selling Price and My Cost columns only.</div>
+      <label class="hint" for="impkind" style="display:block;margin-top:6px">This price list holds: <select id="impkind"><option value="oem">Selling prices: original (OEM) parts</option><option value="compat">Selling prices: compatible parts</option><option value="cost">My costs: original (OEM) parts</option><option value="costcompat">My costs: compatible parts</option><option value="both">Template with Selling Price and My Cost: original (OEM) parts</option><option value="bothcompat">Template with Selling Price and My Cost: compatible parts</option></select></label>
+      <input id="impfile" type="file" accept=".xlsx,.xls,.csv" hidden>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button id="impbtn" type="button">Choose price list</button><button id="impapply" type="button" hidden>Apply prices</button><button id="impclear" type="button">Remove all saved prices</button></div>
+      <div class="hint" id="impprev" role="status"></div>
+    </div>
+      </section>
+  <section class="card" aria-label="Saved prices and costs">
+    <h2>Saved prices and costs <span class="hint" id="scount"></span></h2>
+    <label>Search<input type="search" id="sq" placeholder="Part number" autocomplete="off"></label>
+    <div id="savedlist"></div>
+    <div class="hint" id="savedmsg" role="status"></div>
+  </section>
+</div>
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  var fmt=new Intl.NumberFormat('en-CA',{style:'currency',currency:'CAD'});
+  function money(n){ return fmt.format(n||0); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  var SAVED={}, DATA=null;
+  function getData(){
+    if(DATA) return Promise.resolve(DATA);
+    return fetch('quote.html').then(function(r){ return r.text(); }).then(function(t){
+      var m=/var DATA = (\[.*?\]);\n/s.exec(t); DATA=JSON.parse(m[1]).filter(function(p){ return !p.x; });
+      // add compatible entries as the Quote Builder does (names only matter for matching)
+      return DATA;
+    });
+  }
+  var XLSX_URL='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', IMP=null, PMAP=null;
+  function nrm(s){ return String(s==null?'':s).toUpperCase().replace(/[^A-Z0-9]/g,''); }
+  function buildPMap(){
+    if(PMAP) return PMAP; PMAP={};
+    DATA.forEach(function(p){ [p.c,p.d].forEach(function(l){ l.forEach(function(x){
+      var toks=String(x.t).split(/\s+/); toks.push(x.t);
+      toks.forEach(function(tk){ var k=nrm(tk); if(k.length<3||!/\d/.test(k)) return; (PMAP[k]=PMAP[k]||{})[x.t]=1; });
+    }); }); });
+    return PMAP;
+  }
+  function numOf(v){ if(typeof v==='number') return isFinite(v)?v:null; if(typeof v!=='string') return null; var s=v.replace(/[^0-9.,-]/g,'').replace(/,/g,''); if(!/\d/.test(s)) return null; var n=parseFloat(s); return isFinite(n)?n:null; }
+  function loadXlsx(){
+    return new Promise(function(res,rej){
+      if(window.XLSX) return res(window.XLSX);
+      var s=document.createElement('script'); s.src=XLSX_URL; s.onload=function(){ res(window.XLSX); }; s.onerror=function(){ rej(new Error('lib')); }; document.head.appendChild(s);
+    });
+  }
+  function readRows(file){
+    return loadXlsx().then(function(X){
+      return new Promise(function(res,rej){
+        var fr=new FileReader();
+        fr.onload=function(){ try{ var wb=X.read(fr.result,{type:'array'}); var rows=[]; wb.SheetNames.forEach(function(n){ rows=rows.concat(X.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''})); }); res(rows); }catch(e){ rej(e); } };
+        fr.onerror=function(){ rej(new Error('read')); };
+        fr.readAsArrayBuffer(file);
+      });
+    });
+  }
+  function parseRows(rows){
+    var pc=-1, pr=-1, co=-1;
+    for(var i=0;i<Math.min(rows.length,12)&&pc<0;i++){
+      var r=rows[i]||[], a=-1, p1=-1, c1=-1;
+      r.forEach(function(c,j){ var t=String(c).toLowerCase(); if(a<0&&/part|sku|item|model|mfr|product|number|code/.test(t)&&!/price|cost/.test(t)) a=j; if(p1<0&&/price|\$/.test(t)&&!/cost/.test(t)) p1=j; if(c1<0&&/cost/.test(t)) c1=j; });
+      if(a>=0&&(p1>=0||c1>=0)){ pc=a; pr=p1; co=c1; }
+    }
+    var dual=pc>=0&&pr>=0&&co>=0, single=pr>=0?pr:co, out=[];
+    rows.forEach(function(r){
+      r=r||[]; var part=null, price=null, cost=null;
+      if(pc>=0){ part=String(r[pc]==null?'':r[pc]).trim(); if(dual){ price=numOf(r[pr]); cost=numOf(r[co]); } else price=numOf(r[single]); }
+      else { part=String(r[0]==null?'':r[0]).trim(); for(var j=1;j<r.length&&price==null;j++) price=numOf(r[j]); }
+      var okp=price!=null&&price>0&&price<1000000, okc=cost!=null&&cost>0&&cost<1000000;
+      if(part&&/\d/.test(part)&&(okp||okc)){ var o={part:part,price:okp?Math.round(price*100)/100:null}; if(dual){ o.dual=true; o.cost=okc?Math.round(cost*100)/100:null; } out.push(o); }
+    });
+    return out;
+  }
+  function planImport(items){
+    var map=buildPMap(), bulk={}, hit=0, miss=[], KD=($('impkind')&&$('impkind').value)||'oem', PRE=(KD.indexOf('cost')===0?'cost ':'')+(/compat/.test(KD)?'compat ':'');
+    items.forEach(function(it){
+      var k=nrm(it.part), m=map[k];
+      if(m){ hit++; Object.keys(m).forEach(function(t){ if(it.dual){ var CP=/compat/.test(KD)?'compat ':''; if(it.price!=null) bulk[CP+t]=it.price; if(it.cost!=null) bulk['cost '+CP+t]=it.cost; } else bulk[PRE+t]=it.price; }); } else miss.push(it.part);
+    });
+    return {bulk:bulk, hit:hit, miss:miss, total:items.length};
+  }
+  $('impbtn').addEventListener('click',function(){ $('impfile').click(); });
+  $('impfile').addEventListener('change',function(){
+    var f=this.files&&this.files[0]; this.value=''; if(!f) return;
+    $('impapply').hidden=true; IMP=null; $('impprev').textContent='Reading '+f.name+'...';
+    Promise.all([readRows(f),getData()]).then(function(rr){ var rows=rr[0];
+      var items=parseRows(rows);
+      if(!items.length){ $('impprev').textContent='No part number and price pairs found. Use one column for the part number and one for the price.'; return; }
+      var pl=planImport(items); IMP=pl;
+      var n=Object.keys(pl.bulk).length;
+      $('impprev').textContent=pl.hit+' of '+pl.total+' rows match parts in this tool ('+n+' toner or drum entries will be priced).'+(pl.miss.length?' Not found: '+pl.miss.slice(0,12).join(', ')+(pl.miss.length>12?' and '+(pl.miss.length-12)+' more':'')+'.':'');
+      $('impapply').hidden=!n;
+    }).catch(function(){ $('impprev').textContent='That file could not be read. Try saving it as .xlsx or .csv.'; });
+  });
+  $('impapply').addEventListener('click',function(){
+    if(!IMP) return; var b=IMP.bulk; $('impapply').hidden=true; $('impprev').textContent='Saving...';
+    fetch('/api/prices',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({bulk:b})}).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(){
+      Object.keys(b).forEach(function(k){ SAVED[k]=b[k]; });
+      renderSaved(); IMP=null; $('impprev').textContent='Prices applied and saved to your login.';
+    }).catch(function(){ $('impprev').textContent='Could not save the prices. Check your connection or the 3,500 saved price limit.'; });
+  });
+  $('impclear').addEventListener('click',function(){
+    if(!window.confirm('Remove all of your saved prices?')) return;
+    fetch('/api/prices',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({clear:true})}).then(function(r){ if(!r.ok) throw 0; SAVED={}; renderSaved(); $('impprev').textContent='All saved prices removed. Reload to see list prices.'; }).catch(function(){ $('impprev').textContent='Could not remove saved prices.'; });
+  });
+
+  var QS='';
+  function kindOf(k){
+    var cost=k.indexOf('cost ')===0, r=cost?k.slice(5):k, g;
+    if(r.indexOf('custom ')===0||r.indexOf('extra ')===0) return cost?'Custom and other items: costs':'Custom and other items: selling prices';
+    var comp=r.indexOf('compat ')===0;
+    return cost?(comp?'Compatible parts: costs':'Original (OEM) parts: costs'):(comp?'Compatible parts: selling prices':'Original (OEM) parts: selling prices');
+  }
+  var ORDER=['Original (OEM) parts: selling prices','Compatible parts: selling prices','Original (OEM) parts: costs','Compatible parts: costs','Custom and other items: selling prices','Custom and other items: costs'];
+  function label(k){ var r=k.indexOf('cost ')===0?k.slice(5):k; return r.replace(/^compat /,'').replace(/^custom /,'').replace(/^extra /,''); }
+  function renderSaved(){
+    var keys=Object.keys(SAVED).sort(), g={}, shown=0, q=QS.toLowerCase();
+    keys.forEach(function(k){ var lb=label(k); if(q&&lb.toLowerCase().indexOf(q)<0) return; shown++; var kd=kindOf(k); (g[kd]=g[kd]||[]).push('<div class="srow"><span class="skey">'+esc(lb)+'</span><span class="mono">'+money(SAVED[k])+'</span><button class="del" type="button" data-sk="'+esc(k)+'" aria-label="Remove saved '+esc(lb)+'">&times;</button></div>'); });
+    var out=''; ORDER.forEach(function(kd){ if(g[kd]) out+='<div class="gh">'+esc(kd)+' ('+g[kd].length+')'+(kd.indexOf('costs')>=0?' <span class="hint">private</span>':'')+'</div>'+g[kd].join(''); });
+    $('savedlist').innerHTML=out||'<div class="hint">'+(keys.length?'No saved prices match.':'No saved prices yet. Import a price list above, or tap Save price under a price on a quote.')+'</div>';
+    $('scount').textContent='('+keys.length+')';
+  }
+  $('sq').addEventListener('input',function(){ QS=this.value.trim(); renderSaved(); });
+  $('savedlist').addEventListener('click',function(e){
+    var b=e.target.closest('button[data-sk]'); if(!b) return; var key=b.getAttribute('data-sk'), old=SAVED[key]; delete SAVED[key]; renderSaved();
+    fetch('/api/prices',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({key:key,price:null})}).then(function(r){ if(!r.ok) throw 0; $('savedmsg').textContent='Removed.'; }).catch(function(){ SAVED[key]=old; renderSaved(); $('savedmsg').textContent='Could not remove. Check your connection.'; });
+  });
+  fetch('/api/prices',{headers:{accept:'application/json'}}).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(j){ SAVED=j.prices||{}; $('saveduser').textContent=j.email||''; renderSaved(); }).catch(function(){ $('savedlist').innerHTML='<div class="hint">Could not load your saved prices.</div>'; });
+})();
+</script>
+</body>
+</html>

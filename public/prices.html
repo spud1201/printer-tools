@@ -138,7 +138,8 @@ h2.coll button{all:unset;box-sizing:border-box;width:100%;display:flex;align-ite
 h2.coll button:focus-visible{outline:2px solid var(--a,#1f6feb);outline-offset:3px;border-radius:4px}
 h2.coll .chev{margin-left:auto;transition:transform .15s}
 h2.coll button[aria-expanded=false] .chev{transform:rotate(-90deg)}
-.gh{font-weight:700;font-size:.9rem;margin-top:12px}
+.gh{font-weight:700;font-size:.9rem;margin-top:8px}
+.gb{width:100%;text-align:left;display:flex;align-items:center;gap:8px;font-weight:700}
 </style>
 </head>
 <body>
@@ -258,7 +259,7 @@ h2.coll button[aria-expanded=false] .chev{transform:rotate(-90deg)}
     fetch('/api/prices',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({clear:true})}).then(function(r){ if(!r.ok) throw 0; SAVED={}; renderSaved(); $('impprev').textContent='All saved prices removed. Reload to see list prices.'; }).catch(function(){ $('impprev').textContent='Could not remove saved prices.'; });
   });
 
-  var QS='';
+  var QS='', OPEN={};
   function kindOf(k){
     var cost=k.indexOf('cost ')===0, r=cost?k.slice(5):k, g;
     if(r.indexOf('custom ')===0||r.indexOf('extra ')===0) return cost?'Custom and other items: costs':'Custom and other items: selling prices';
@@ -270,10 +271,12 @@ h2.coll button[aria-expanded=false] .chev{transform:rotate(-90deg)}
   function renderSaved(){
     var keys=Object.keys(SAVED).sort(), g={}, shown=0, q=QS.toLowerCase();
     keys.forEach(function(k){ var lb=label(k); if(q&&lb.toLowerCase().indexOf(q)<0) return; shown++; var kd=kindOf(k); (g[kd]=g[kd]||[]).push('<div class="srow"><span class="skey">'+esc(lb)+'</span><span class="mono">'+money(SAVED[k])+'</span><button class="del" type="button" data-sk="'+esc(k)+'" aria-label="Remove saved '+esc(lb)+'">&times;</button></div>'); });
-    var out=''; ORDER.forEach(function(kd){ if(g[kd]) out+='<div class="gh">'+esc(kd)+' ('+g[kd].length+')'+(kd.indexOf('costs')>=0?' <span class="hint">private</span>':'')+'</div>'+g[kd].join(''); });
+    var out=''; ORDER.forEach(function(kd){ if(!g[kd]) return; var on=!!q||!!OPEN[kd];
+      out+='<div class="gh"><button type="button" class="gb" data-g="'+esc(kd)+'" aria-expanded="'+(on?'true':'false')+'"><span class="chev" aria-hidden="true">'+(on?'&#9662;':'&#9656;')+'</span> '+esc(kd)+' ('+g[kd].length+')'+(kd.indexOf('costs')>=0?' <span class="hint">private</span>':'')+'</button></div>'+(on?g[kd].join(''):''); });
     $('savedlist').innerHTML=out||'<div class="hint">'+(keys.length?'No saved prices match.':'No saved prices yet. Import a price list above, or tap Save price under a price on a quote.')+'</div>';
     $('scount').textContent='('+keys.length+')';
   }
+  $('savedlist').addEventListener('click',function(e){ var gb=e.target.closest('button[data-g]'); if(!gb) return; var k=gb.getAttribute('data-g'); OPEN[k]=!OPEN[k]; renderSaved(); });
   $('sq').addEventListener('input',function(){ QS=this.value.trim(); renderSaved(); });
   $('savedlist').addEventListener('click',function(e){
     var b=e.target.closest('button[data-sk]'); if(!b) return; var key=b.getAttribute('data-sk'), old=SAVED[key]; delete SAVED[key]; renderSaved();

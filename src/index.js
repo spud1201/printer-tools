@@ -167,6 +167,24 @@ export default {
           if (!t) delete rec.pnotes[body.pnote.key];
           else if (body.pnote.key in rec.pnotes || Object.keys(rec.pnotes).length < 300) rec.pnotes[body.pnote.key] = t;
         }
+        if (body.csup && typeof body.csup === 'object' && Number.isInteger(body.csup.key) && body.csup.key >= 0 && body.csup.key < 100000) {
+          rec.csup = rec.csup || {};
+          const hid = Array.isArray(body.csup.hidden) ? body.csup.hidden.filter((x) => typeof x === 'string' && x.length > 0).map((x) => x.slice(0, 80)).slice(0, 60) : [];
+          const ext = [];
+          for (const x of (Array.isArray(body.csup.extra) ? body.csup.extra : []).slice(0, 30)) {
+            if (!x || typeof x !== 'object' || (x.k !== 'Toner' && x.k !== 'Drum') || typeof x.t !== 'string' || !x.t.trim()) continue;
+            const e = { k: x.k, t: x.t.trim().slice(0, 60) };
+            if (x.c === true) e.c = true;
+            if (typeof x.d === 'string' && x.d.trim()) e.d = x.d.trim().slice(0, 100);
+            if (Number.isInteger(x.y) && x.y > 0 && x.y < 10000000) e.y = x.y;
+            if (typeof x.p === 'number' && isFinite(x.p) && x.p >= 0 && x.p < 10000000) e.p = Math.round(x.p * 100) / 100;
+            ext.push(e);
+          }
+          const pk = String(body.csup.key);
+          if (!hid.length && !ext.length) delete rec.csup[pk];
+          else if (pk in rec.csup || Object.keys(rec.csup).length < 300) rec.csup[pk] = { hidden: hid, extra: ext };
+          else return json({ error: 'too many customised printers' }, 400);
+        }
         if (body.cprice && typeof body.cprice === 'object' && typeof body.cprice.key === 'string' && body.cprice.key.length > 0 && body.cprice.key.length <= 120) {
           rec.prices = rec.prices || {};
           const pk = body.cprice.key, pv = body.cprice.price;

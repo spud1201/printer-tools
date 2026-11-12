@@ -101,7 +101,7 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
   @page{margin:14mm}
 }
 .on{color:var(--ok-ink);font-weight:700;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase}
-.sup{display:grid;grid-template-columns:3.6rem minmax(0,1fr) auto;gap:4px 10px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line);font-size:.92rem}
+.sup{display:grid;grid-template-columns:3.6rem minmax(0,1fr) auto auto;gap:4px 10px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line);font-size:.92rem}
 .sup:first-of-type{border-top:0}
 .sup .k{color:var(--muted);font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .pnote{display:grid;gap:4px;margin-top:2px;font-size:.8rem}
@@ -110,6 +110,15 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
 .sup .pn{font-family:var(--font-data);font-weight:500;overflow-wrap:anywhere}
 .sup .pr{font-family:var(--font-data);text-align:right;white-space:nowrap}
 .sup .yl{grid-column:2/-1;color:var(--muted);font-size:.82rem}
+.sup .tg{display:inline-block;font-size:.66rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:5px;padding:1px 5px;background:var(--track);color:var(--muted);margin-left:6px;vertical-align:middle}
+.sup .x{border:0;background:none;color:var(--muted);padding:0 4px;font-size:1.1rem;line-height:1}
+.sup .act{grid-column:2/-1;font-size:.8rem}
+.addp{border-top:1px solid var(--line);padding-top:8px}
+.addp .f{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:8px}
+.addp .chk{display:flex;gap:8px;align-items:center;font-weight:500}
+.addp .chk input{width:auto}
+.rest{font-size:.8rem;color:var(--muted)}
+@media (max-width:30rem){.addp .f{grid-template-columns:minmax(0,1fr)}}
 @media print{.notesprint:not([hidden]){display:block!important;white-space:pre-wrap;border-top:1px solid #999;padding-top:8px;margin-top:10px}body{background:#fff}.noprint{display:none!important}}
 .add{grid-template-columns:minmax(0,1fr) auto auto!important}
 .arrow{min-width:44px;padding:9px 0;font-size:1rem;line-height:1}
@@ -160,7 +169,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function name(p){return p.m.indexOf(p.b)===0?p.m:p.b+' '+p.m;}
   DATA.forEach(function(p,i){ p.i=i; p.n=name(p); });
-  var CL={};
+  var CL={}, OPENAP={};
   // printers a client has on their saved quotes: model index -> total qty, plus the parts picked
   function printersFor(c){
     var map={},order=[];
@@ -189,16 +198,32 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     ps.forEach(function(e){
       var p=e.p; t+='\n'+name(p)+(e.qty>1?' x '+e.qty:'')+'\n';
       h+='<section class="card"><div class="line-head"><h3>'+esc(name(p))+(e.qty>1?' <span class="type">x '+e.qty+'</span>':'')+'</h3><button class="del noprint" type="button" data-rm="'+p.i+'" aria-label="Remove '+esc(name(p))+' from this client" title="Remove from client">&times;</button></div><div class="type">'+esc(p.t||'')+'</div>';
-      var any=false;
+      var any=false, cs=(c.csup&&c.csup[p.i])||{hidden:[],extra:[]}, hid=cs.hidden||[], ext=cs.extra||[], nh=0;
       [['Toner',p.c],['Drum',p.d]].forEach(function(g){
         g[1].forEach(function(x){
-          if(x.ph) return; any=true;
+          if(x.ph) return;
+          if(hid.indexOf(g[0]+'|'+x.t)>=0){ nh++; return; }
+          any=true;
           var on=!!e.picked[x.t];
-          h+='<div class="sup"><span class="k">'+g[0]+'</span><span class="pn">'+esc(x.t)+(on?' <span class="on">on quote</span>':'')+'</span><span class="pr">'+(x.p?fmt.format(x.p):'ask')+'</span>'+(x.y?'<span class="yl">'+x.y.toLocaleString('en-US')+' pages</span>':'')+'</div>';
+          h+='<div class="sup"><span class="k">'+g[0]+'</span><span class="pn">'+esc(x.t)+(on?' <span class="on">on quote</span>':'')+'</span><span class="pr">'+(x.p?fmt.format(x.p):'ask')+'</span><button class="x noprint" type="button" data-hide="'+g[0]+'|'+esc(x.t)+'" data-k="'+p.i+'" aria-label="Remove '+esc(x.t)+' from this printer" title="Remove from this printer">&times;</button>'+(x.y?'<span class="yl">'+x.y.toLocaleString('en-US')+' pages</span>':'')+'<span class="act noprint"><button class="link" type="button" data-compat="'+g[0]+'|'+esc(x.t)+'" data-k="'+p.i+'">+ Add compatible</button></span></div>';
           t+='  '+g[0]+': '+x.t+(x.y?' ('+x.y.toLocaleString('en-US')+' pg)':'')+(x.p?' '+fmt.format(x.p):'')+'\n';
         });
       });
+      ext.forEach(function(x,xi){
+        any=true;
+        h+='<div class="sup"><span class="k">'+x.k+'</span><span class="pn">'+esc(x.t)+'<span class="tg">'+(x.c?'Compatible':'Custom')+'</span></span><span class="pr">'+(x.p!=null?fmt.format(x.p):'ask')+'</span><button class="x noprint" type="button" data-delx="'+xi+'" data-k="'+p.i+'" aria-label="Remove '+esc(x.t)+'" title="Remove">&times;</button>'+((x.y||x.d)?'<span class="yl">'+(x.y?x.y.toLocaleString('en-US')+' pages':'')+(x.y&&x.d?' · ':'')+esc(x.d||'')+'</span>':'')+'</div>';
+        t+='  '+x.k+': '+x.t+(x.c?' (compatible)':' (custom)')+(x.y?' ('+x.y.toLocaleString('en-US')+' pg)':'')+(x.d?' - '+x.d:'')+(x.p!=null?' '+fmt.format(x.p):'')+'\n';
+      });
       if(!any){ h+='<div class="hint">No toner or drum part numbers on file for this model.'+(p.s?' '+esc(p.s):'')+'</div>'; t+='  No parts on file\n'; }
+      if(nh){ h+='<div class="rest noprint">Removed ('+nh+'): '; hid.forEach(function(k){ var pr=k.split('|'); h+='<button class="link" type="button" data-restore="'+esc(k)+'" data-k="'+p.i+'">'+esc(pr[1])+' (restore)</button> '; }); h+='</div>'; }
+      h+='<details class="addp noprint" data-ap="'+p.i+'"'+(OPENAP[p.i]?' open':'')+'><summary>Add a part or custom SKU</summary><div class="f">'
+        +'<label>Type<select data-f="k"><option>Toner</option><option>Drum</option></select></label>'
+        +'<label>Part number or SKU<input type="text" data-f="t" maxlength="60" autocomplete="off" placeholder="e.g. TN760 or your own SKU"></label>'
+        +'<label>Description (optional)<input type="text" data-f="d" maxlength="100" autocomplete="off"></label>'
+        +'<label>Page yield (optional)<input type="number" inputmode="numeric" min="0" data-f="y"></label>'
+        +'<label>Price (optional)<input type="number" inputmode="decimal" min="0" step="0.01" data-f="p"></label>'
+        +'<label class="chk"><input type="checkbox" data-f="c"> Compatible part</label>'
+        +'<div class="full"><button class="primary" type="button" data-addp="'+p.i+'">Add to this printer</button></div></div></details>';
       var pn=((c.pnotes&&c.pnotes[p.i])||'');
       h+='<label class="pnote noprint">Printer note<input type="text" data-pn="'+p.i+'" maxlength="500" autocomplete="off" placeholder="Location, serial number, anything to remember" value="'+esc(pn)+'"></label>';
       if(pn){ h+='<div class="pnprint">Note: '+esc(pn)+'</div>'; t+='  Note: '+pn+'\n'; }
@@ -272,6 +297,39 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     ['quote','margin'].forEach(function(t){ if(c[t]&&c[t].lines){ c[t].lines=c[t].lines.filter(function(l){ return l.key!==k; }); jobs.push(put(id,t)); } });
     if(c.pnotes&&c.pnotes[k]){ delete c.pnotes[k]; jobs.push(fetch('/api/clients',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({id:id,name:c.name,pnote:{key:k,text:''}})})); }
     Promise.all(jobs).then(function(){ addMsg(DATA[k].n+' removed.'); render(); }).catch(function(){ c.quote=backup.quote; c.margin=backup.margin; addMsg('Could not remove. Try again.'); render(); });
+  });
+  function csupOf(c,k){ c.csup=c.csup||{}; var r=c.csup[k]; if(!r) r=c.csup[k]={hidden:[],extra:[]}; r.hidden=r.hidden||[]; r.extra=r.extra||[]; return r; }
+  function saveSup(id,k,before){
+    var c=CL[id], r=(c.csup&&c.csup[k])||{hidden:[],extra:[]};
+    return fetch('/api/clients',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({id:id,name:c.name,csup:{key:k,hidden:r.hidden,extra:r.extra}})}).then(function(x){ if(!x.ok) throw 0; if(!r.hidden.length&&!r.extra.length&&c.csup) delete c.csup[k]; addMsg('Saved.'); render(); })
+      .catch(function(){ if(before===undefined){ if(c.csup) delete c.csup[k]; } else { c.csup=c.csup||{}; c.csup[k]=before; } addMsg('Could not save. Try again.'); render(); });
+  }
+  function snap(c,k){ return c.csup&&c.csup[k]?JSON.parse(JSON.stringify(c.csup[k])):undefined; }
+  $('out').addEventListener('toggle',function(e){ var d=e.target; if(d&&d.getAttribute&&d.getAttribute('data-ap')!=null) OPENAP[d.getAttribute('data-ap')]=d.open; },true);
+  $('out').addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b) return;
+    var id=$('sel').value, c=CL[id]; if(!c) return;
+    var k=+b.getAttribute('data-k'), before;
+    if(b.hasAttribute('data-hide')){ before=snap(c,k); var r=csupOf(c,k), v=b.getAttribute('data-hide'); if(r.hidden.indexOf(v)<0) r.hidden.push(v); saveSup(id,k,before); }
+    else if(b.hasAttribute('data-restore')){ before=snap(c,k); var r2=csupOf(c,k), v2=b.getAttribute('data-restore'); r2.hidden=r2.hidden.filter(function(h){ return h!==v2; }); saveSup(id,k,before); }
+    else if(b.hasAttribute('data-delx')){ before=snap(c,k); var r3=csupOf(c,k); r3.extra.splice(+b.getAttribute('data-delx'),1); saveSup(id,k,before); }
+    else if(b.hasAttribute('data-compat')){
+      var pr=b.getAttribute('data-compat').split('|'), p=DATA[k], src=null; (pr[0]==='Toner'?p.c:p.d).forEach(function(x){ if(x.t===pr[1]) src=x; });
+      before=snap(c,k); var r4=csupOf(c,k);
+      if(r4.extra.some(function(x){ return x.c&&x.k===pr[0]&&x.t===pr[1]; })){ addMsg('A compatible '+pr[1]+' is already added.'); return; }
+      var it={k:pr[0],t:pr[1],c:true}; if(src&&src.y) it.y=src.y; r4.extra.push(it); saveSup(id,k,before);
+    }
+    else if(b.hasAttribute('data-addp')){
+      var box=b.closest('details'), g=function(f){ return box.querySelector('[data-f='+f+']'); };
+      var tt=g('t').value.trim(); if(!tt){ addMsg('Enter a part number or SKU first.'); g('t').focus(); return; }
+      var it2={k:g('k').value,t:tt}; if(g('c').checked) it2.c=true;
+      var dd=g('d').value.trim(); if(dd) it2.d=dd;
+      var yy=parseInt(g('y').value,10); if(yy>0) it2.y=yy;
+      var pp=parseFloat(g('p').value); if(isFinite(pp)&&pp>=0) it2.p=pp;
+      before=snap(c,k); var r5=csupOf(c,k);
+      if(r5.extra.length>=30){ addMsg('That printer already has 30 added parts.'); return; }
+      r5.extra.push(it2); OPENAP[k]=false; saveSup(id,k,before);
+    }
   });
   var noteT=null, shownId='';
   $('notes').addEventListener('input',function(){

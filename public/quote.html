@@ -143,6 +143,7 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
       <label>Date<input id="qdate" type="date"></label>
       <label>Prepared by<input id="qby" type="text" autocomplete="off" placeholder="Your name"></label>
       <label class="full">Your company details (shown at the top of the printed quote)<input id="qco" type="text" autocomplete="off" placeholder="Company name, address, phone"></label>
+      <div class="full" id="defrow" hidden><button id="savedef" type="button">Save as my default details</button> <span class="hint" id="defmsg">Saves your name and company details to your login. New quotes on any device start with them.</span></div>
       <div class="full logobox" id="logobox" hidden>
         <div class="lt">Your logo (shown at the top of the printed quote)</div>
         <div class="lrow"><div class="lprev"><img id="logoimg" alt="Your logo" hidden><span id="nologo" class="hint">No logo yet</span></div>
@@ -241,6 +242,22 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   }
   function loadLogo(){
     fetch('/api/logo',{headers:{accept:'application/json'}}).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(j){ LOGO=j.logo||null; $('logobox').hidden=false; showLogo(); }).catch(function(){});
+  }
+  var PROF=null;
+  function defState(){
+    var m=$('defmsg'); if(!m||!PROF) return;
+    var same=(PROF.by||'')===(S.qby||'').trim()&&(PROF.company||'')===(S.qco||'').trim();
+    m.textContent=same&&(PROF.by||PROF.company)?'Saved as your default. New quotes start with these details.':'Saves your name and company details to your login. New quotes on any device start with them.';
+  }
+  function loadProfile(){
+    fetch('/api/profile',{headers:{accept:'application/json'}}).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(j){
+      PROF={by:j.by||'',company:j.company||''}; $('defrow').hidden=false;
+      var ch=false;
+      if(!S.qby&&PROF.by){ S.qby=PROF.by; $('qby').value=PROF.by; ch=true; }
+      if(!S.qco&&PROF.company){ S.qco=PROF.company; $('qco').value=PROF.company; ch=true; }
+      if(ch){ save(); render(); }
+      defState();
+    }).catch(function(){});
   }
   function putLogo(v){
     var msg=$('logomsg');
@@ -719,7 +736,12 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     })();
     $('pick').addEventListener('change',function(){ var v=this.value.trim().toLowerCase(); if(DATA.some(function(p){return sNorm(p.n)===sNorm(v);})) doAdd(); });
     $('savedlist').addEventListener('click',function(e){ var b=e.target.closest('button[data-sk]'); if(!b) return; savePrice(b.getAttribute('data-sk'),''); });
-    loadSaved(); loadLogo(); initClients();
+    loadSaved(); loadLogo(); initClients(); loadProfile();
+    $('savedef').addEventListener('click',function(){
+      var b=this,m=$('defmsg'); b.disabled=true;
+      fetch('/api/profile',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({by:S.qby||'',company:S.qco||''})}).then(function(r){ if(!r.ok) throw 0; PROF={by:(S.qby||'').trim(),company:(S.qco||'').trim()}; defState(); }).catch(function(){ m.textContent='Could not save. Try again.'; }).then(function(){ b.disabled=false; });
+    });
+    ['qby','qco'].forEach(function(id){ $(id).addEventListener('input',defState); });
     $('logoup').addEventListener('click',function(){ $('logofile').click(); });
     $('logofile').addEventListener('change',function(){ handleLogoFile(this.files&&this.files[0]); this.value=''; });
     $('logorm').addEventListener('click',function(){ LOGO=null; showLogo(); putLogo(null); });

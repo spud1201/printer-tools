@@ -128,7 +128,7 @@ export default {
       } catch (e) { return json({ error: 'unavailable' }, 503); }
     }
 
-    if (url.pathname !== '/api/prices' && url.pathname !== '/api/logo' && url.pathname !== '/api/clients') return env.ASSETS.fetch(request);
+    if (url.pathname !== '/api/prices' && url.pathname !== '/api/logo' && url.pathname !== '/api/profile' && url.pathname !== '/api/clients') return env.ASSETS.fetch(request);
 
     const kvKey = 'u:' + email;
 
@@ -182,6 +182,24 @@ export default {
         }
         all[id] = rec;
         await env.PRICES.put(ck, JSON.stringify(all));
+        return json({ ok: true });
+      }
+      return json({ error: 'method not allowed' }, 405);
+    }
+
+    if (url.pathname === '/api/profile') {
+      const profKey = 'prof:' + email;
+      if (request.method === 'GET') {
+        let p = null;
+        try { p = JSON.parse((await env.PRICES.get(profKey)) || 'null'); } catch (e) {}
+        return json({ by: (p && p.by) || '', company: (p && p.company) || '' });
+      }
+      if (request.method === 'PUT') {
+        let body;
+        try { body = await request.json(); } catch (e) { return json({ error: 'bad json' }, 400); }
+        const by = typeof body.by === 'string' ? body.by.trim().slice(0, 120) : '';
+        const company = typeof body.company === 'string' ? body.company.trim().slice(0, 600) : '';
+        await env.PRICES.put(profKey, JSON.stringify({ by, company }));
         return json({ ok: true });
       }
       return json({ error: 'method not allowed' }, 405);

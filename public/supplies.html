@@ -362,7 +362,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   });
   DATA.forEach(function(p){});
   fetch('/api/clients',{headers:{accept:'application/json'}}).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(j){ CL=j.clients||{}; fillSel(); })
-    .catch(function(){ $('sel').innerHTML='<option value="">Sign in to see clients</option>'; $('msg').textContent='Could not load clients. Open this page from tools.officesurplus.ca while signed in.'; });
+    .catch(function(){ $('sel').innerHTML='<option value="">Sign in to see clients</option>'; $('msg').textContent='Could not load clients. Open this page from the main site while signed in.'; });
 })();
 </script>
 <script src="collapse.js"></script>

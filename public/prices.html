@@ -140,7 +140,13 @@ h2.coll .chev{margin-left:auto;transition:transform .15s}
 h2.coll button[aria-expanded=false] .chev{transform:rotate(-90deg)}
 .dlbtn{display:inline-block;padding:10px 14px;border:1px solid var(--line);border-radius:10px;font-weight:600;text-decoration:none;color:inherit;background:var(--card,#fff)}
 .gh{font-weight:700;font-size:.9rem;margin-top:8px}
-.gb{width:100%;text-align:left;display:flex;align-items:center;gap:8px;font-weight:700}
+.gh{display:flex;gap:8px;align-items:center}
+.dl{flex:none;color:var(--danger,#b3261e);font-size:.8rem;padding:6px 10px}
+.ovl{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.dlg{background:var(--card,#fff);color:inherit;border-radius:14px;padding:18px;max-width:380px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.dlg p{margin:0 0 14px}
+.dlg .acts{display:flex;gap:8px;justify-content:flex-end}
+.gb{flex:1;text-align:left;display:flex;align-items:center;gap:8px;font-weight:700}
 </style>
 </head>
 <body>
@@ -261,7 +267,7 @@ h2.coll button[aria-expanded=false] .chev{transform:rotate(-90deg)}
     fetch('/api/prices',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({clear:true})}).then(function(r){ if(!r.ok) throw 0; SAVED={}; renderSaved(); $('impprev').textContent='All saved prices removed. Reload to see list prices.'; }).catch(function(){ $('impprev').textContent='Could not remove saved prices.'; });
   });
 
-  var QS='', OPEN={};
+  var QS='', OPEN={}, GK={};
   function kindOf(k){
     var cost=k.indexOf('cost ')===0, r=cost?k.slice(5):k, g;
     if(r.indexOf('custom ')===0||r.indexOf('extra ')===0) return cost?'Custom and other items: costs':'Custom and other items: selling prices';
@@ -271,13 +277,28 @@ h2.coll button[aria-expanded=false] .chev{transform:rotate(-90deg)}
   var ORDER=['Original (OEM) parts: selling prices','Compatible parts: selling prices','Original (OEM) parts: costs','Compatible parts: costs','Custom and other items: selling prices','Custom and other items: costs'];
   function label(k){ var r=k.indexOf('cost ')===0?k.slice(5):k; return r.replace(/^compat /,'').replace(/^custom /,'').replace(/^extra /,''); }
   function renderSaved(){
-    var keys=Object.keys(SAVED).sort(), g={}, shown=0, q=QS.toLowerCase();
+    var keys=Object.keys(SAVED).sort(), g={}, shown=0, q=QS.toLowerCase(); GK={};
+    keys.forEach(function(k){ var kd0=kindOf(k); (GK[kd0]=GK[kd0]||[]).push(k); });
     keys.forEach(function(k){ var lb=label(k); if(q&&lb.toLowerCase().indexOf(q)<0) return; shown++; var kd=kindOf(k); (g[kd]=g[kd]||[]).push('<div class="srow"><span class="skey">'+esc(lb)+'</span><span class="mono">'+money(SAVED[k])+'</span><button class="del" type="button" data-sk="'+esc(k)+'" aria-label="Remove saved '+esc(lb)+'">&times;</button></div>'); });
     var out=''; ORDER.forEach(function(kd){ if(!g[kd]) return; var on=!!q||!!OPEN[kd];
-      out+='<div class="gh"><button type="button" class="gb" data-g="'+esc(kd)+'" aria-expanded="'+(on?'true':'false')+'"><span class="chev" aria-hidden="true">'+(on?'&#9662;':'&#9656;')+'</span> '+esc(kd)+' ('+g[kd].length+')'+(kd.indexOf('costs')>=0?' <span class="hint">private</span>':'')+'</button></div>'+(on?g[kd].join(''):''); });
+      out+='<div class="gh"><button type="button" class="gb" data-g="'+esc(kd)+'" aria-expanded="'+(on?'true':'false')+'"><span class="chev" aria-hidden="true">'+(on?'&#9662;':'&#9656;')+'</span> '+esc(kd)+' ('+g[kd].length+')'+(kd.indexOf('costs')>=0?' <span class="hint">private</span>':'')+'</button><button type="button" class="dl" data-dl="'+esc(kd)+'">Delete list</button></div>'+(on?g[kd].join(''):''); });
     $('savedlist').innerHTML=out||'<div class="hint">'+(keys.length?'No saved prices match.':'No saved prices yet. Import a price list above, or tap Save price under a price on a quote.')+'</div>';
     $('scount').textContent='('+keys.length+')';
   }
+  function yesNo(msg,onYes){
+    var o=document.createElement('div'); o.className='ovl'; o.setAttribute('role','dialog'); o.setAttribute('aria-modal','true');
+    o.innerHTML='<div class="dlg"><p></p><div class="acts"><button type="button" data-n>No</button><button type="button" class="primary" data-y>Yes</button></div></div>'; o.querySelector('p').textContent=msg;
+    function close(){ document.body.removeChild(o); }
+    o.querySelector('[data-n]').onclick=close; o.querySelector('[data-y]').onclick=function(){ close(); onYes(); }; o.addEventListener('click',function(e){ if(e.target===o) close(); });
+    document.body.appendChild(o); o.querySelector('[data-n]').focus();
+  }
+  $('savedlist').addEventListener('click',function(e){
+    var db=e.target.closest('button[data-dl]'); if(!db) return; var kd=db.getAttribute('data-dl'), ks=(GK[kd]||[]).slice();
+    yesNo('Delete the whole list "'+kd+'" ('+ks.length+' items)? This cannot be undone.',function(){
+      var old={}; ks.forEach(function(k){ old[k]=SAVED[k]; delete SAVED[k]; }); renderSaved();
+      fetch('/api/prices',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({remove:ks})}).then(function(r){ if(!r.ok) throw 0; $('savedmsg').textContent='Deleted "'+kd+'".'; }).catch(function(){ Object.keys(old).forEach(function(k){ SAVED[k]=old[k]; }); renderSaved(); $('savedmsg').textContent='Could not delete the list. Check your connection.'; });
+    });
+  });
   $('savedlist').addEventListener('click',function(e){ var gb=e.target.closest('button[data-g]'); if(!gb) return; var k=gb.getAttribute('data-g'); OPEN[k]=!OPEN[k]; renderSaved(); });
   $('sq').addEventListener('input',function(){ QS=this.value.trim(); renderSaved(); });
   $('savedlist').addEventListener('click',function(e){

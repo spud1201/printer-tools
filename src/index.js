@@ -268,6 +268,12 @@ export default {
       let body;
       try { body = await request.json(); } catch (e) { return json({ error: 'bad json' }, 400); }
       if (body.clear === true) { await env.PRICES.delete(kvKey); return json({ ok: true }); }
+      if (Array.isArray(body.remove)) {
+        const cur = (await env.PRICES.get(kvKey, 'json')) || {};
+        for (const k0 of body.remove.slice(0, MAX_KEYS)) delete cur[String(k0).trim().slice(0, 140)];
+        await env.PRICES.put(kvKey, JSON.stringify(cur));
+        return json({ ok: true, count: Object.keys(cur).length });
+      }
       if (body.bulk && typeof body.bulk === 'object' && !Array.isArray(body.bulk)) {
         const cur = (await env.PRICES.get(kvKey, 'json')) || {};
         for (const [k0, v] of Object.entries(body.bulk)) {

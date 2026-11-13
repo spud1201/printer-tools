@@ -138,6 +138,7 @@ h2.coll button{all:unset;box-sizing:border-box;width:100%;display:flex;align-ite
 h2.coll button:focus-visible{outline:2px solid var(--a,#1f6feb);outline-offset:3px;border-radius:4px}
 h2.coll .chev{margin-left:auto;transition:transform .15s}
 h2.coll button[aria-expanded=false] .chev{transform:rotate(-90deg)}
+.dlbtn{display:inline-block;padding:10px 14px;border:1px solid var(--line);border-radius:10px;font-weight:600;text-decoration:none;color:inherit;background:var(--card,#fff)}
 .gh{font-weight:700;font-size:.9rem;margin-top:8px}
 .gb{width:100%;text-align:left;display:flex;align-items:center;gap:8px;font-weight:700}
 </style>
@@ -153,7 +154,8 @@ h2.coll button[aria-expanded=false] .chev{transform:rotate(-90deg)}
     <h2>Import a price list</h2>
 <div class="impbox" style="margin:10px 0;padding:12px;border:1px dashed var(--line);border-radius:10px">
       <b>Import a price list</b>
-      <div class="hint">Download the template, fill in your Selling Price and My Cost, then upload it here. Matching toner and drum numbers get your price on every quote.<br>Download the template: <a href="price-list-oem.xlsx" download>OEM parts (.xlsx)</a> or <a href="price-list-compatible.xlsx" download>compatible parts (.xlsx)</a>. Fill in the yellow Selling Price and My Cost columns only.</div>
+      <div class="hint">Download the template, fill in your Selling Price and My Cost, then upload it here. Matching toner and drum numbers get your price on every quote. Fill in the yellow Selling Price and My Cost columns only.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0"><a class="dlbtn" href="price-list-oem.xlsx" download>&#8595; OEM parts template (.xlsx)</a><a class="dlbtn" href="price-list-compatible.xlsx" download>&#8595; Compatible parts template (.xlsx)</a></div>
       <label class="hint" for="impkind" style="display:block;margin-top:6px">This template is for: <select id="impkind"><option value="both">Original (OEM) parts</option><option value="bothcompat">Compatible parts</option></select></label>
       <input id="impfile" type="file" accept=".xlsx,.xls,.csv" hidden>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button id="impbtn" type="button">Choose price list</button><button id="impapply" type="button" hidden>Apply prices</button><button id="impclear" type="button">Remove all saved prices</button></div>

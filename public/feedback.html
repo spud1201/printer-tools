@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Report a part issue – Tonerly Quotes</title>
+<style>
+:root{--bg:#F2F4F8;--surface:#FFFFFF;--ink:#121927;--muted:#566275;--line:#D8DEE8;--a:#2A59D6;--font:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#0D121B;--surface:#151C28;--ink:#E9EDF4;--muted:#9AA6B8;--line:#263142;--a:#6F98FF}}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.55;-webkit-text-size-adjust:100%;padding:20px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:46rem;margin:0 auto}
+.back{display:inline-block;margin-bottom:12px;color:var(--a);text-decoration:none;font-weight:600}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 20px 8px}
+h1{font-size:1.6rem;margin:0 0 4px}
+h2{font-size:1.05rem;margin:22px 0 6px}
+.sub{color:var(--muted);margin:0 0 12px;font-size:.92rem}
+p,li{margin:0 0 10px}
+ul{padding-left:1.2rem;margin:0 0 10px}
+a{color:var(--a)}
+label{display:block;font-weight:600;margin:14px 0 4px}input,select,textarea{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}button{margin:16px 0 8px;font:inherit;font-weight:600;padding:12px 18px;border-radius:10px;border:0;background:var(--a);color:#fff;cursor:pointer}button:disabled{opacity:.6}#msg{min-height:1.4em;margin:0 0 10px}.ok{color:#1a7f45}.er{color:#c0392b}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a class="back" href="/">&larr; Home</a>
+<div class="card">
+<h1>Report a part number issue</h1>
+<p class="sub">Found a wrong toner, ink or drum, a wrong page yield, or a missing part? Tell us and we will fix it.</p>
+<form id="f" autocomplete="off">
+<label for="model">Printer model</label>
+<input id="model" list="models" maxlength="120" placeholder="Start typing, e.g. MX511de" required>
+<datalist id="models"></datalist>
+<label for="kind">What is wrong?</label>
+<select id="kind" required>
+<option value="">Choose one…</option>
+<option>Wrong part number listed</option>
+<option>Part is missing</option>
+<option>Wrong page yield</option>
+<option>Printer is missing from the site</option>
+<option>Other</option>
+</select>
+<label for="part">Part number with the problem (optional)</label>
+<input id="part" maxlength="80" placeholder="e.g. 51B1X00">
+<label for="correct">Correct part number or yield (if you know it)</label>
+<input id="correct" maxlength="200" placeholder="e.g. 60F1H00, 10,000 pages">
+<label for="details">Details</label>
+<textarea id="details" rows="4" maxlength="1500" placeholder="Where did you confirm it? Any link or note helps."></textarea>
+<button type="submit" id="go">Send report</button>
+<p id="msg" role="status"></p>
+</form>
+<p class="sub">Reports are sent with your account email so we can follow up if needed.</p>
+</div>
+</div>
+<script>
+function $(i){return document.getElementById(i)}
+fetch('quote.html').then(function(r){return r.text()}).then(function(h){
+var m=/var DATA = (\[.*?\]);\n/s.exec(h);if(!m)return;var D=JSON.parse(m[1]),seen={},dl=$('models');
+D.forEach(function(p){if(p.x)return;var n=(/^(Xerox|HP|Lexmark|Brother|Canon|Dell|Epson|Samsung)\b/i.test(p.m)?'':p.b+' ')+p.m;if(seen[n])return;seen[n]=1;var o=document.createElement('option');o.value=n;dl.appendChild(o)})}).catch(function(){});
+$('f').onsubmit=function(e){e.preventDefault();var g=$('go'),m=$('msg');g.disabled=true;m.className='';m.textContent='Sending…';
+fetch('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({model:$('model').value,kind:$('kind').value,part:$('part').value,correct:$('correct').value,details:$('details').value})})
+.then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j}})}).then(function(x){g.disabled=false;
+if(x.ok&&x.j.ok){m.className='ok';m.textContent='Thank you! Your report was sent.';$('f').reset()}
+else{m.className='er';m.textContent=(x.j&&x.j.error==='missing fields')?'Please fill in the printer model, what is wrong, and a part number or details.':'Could not send. Please try again.'}})
+.catch(function(){g.disabled=false;m.className='er';m.textContent='Could not send. Please try again.'})};
+</script>
+</body>
+</html>

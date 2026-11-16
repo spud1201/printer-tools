@@ -115,6 +115,36 @@ export default {
       return json({ error: 'method not allowed' }, 405);
     }
 
+    if (url.pathname === '/api/feedback') {
+      if (request.method === 'POST') {
+        let b;
+        try { b = await request.json(); } catch (e) { return json({ error: 'bad json' }, 400); }
+        const t = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
+        const rec = { email, ts: Date.now(), model: t(b.model, 120), part: t(b.part, 80), kind: t(b.kind, 40), correct: t(b.correct, 200), details: t(b.details, 1500) };
+        if (!rec.model || !rec.kind || (!rec.part && !rec.details)) return json({ error: 'missing fields' }, 400);
+        const mine = (await env.PRICES.list({ prefix: 'fb:', limit: 1000 })).keys.length;
+        if (mine >= 500) return json({ error: 'too many reports waiting, try again later' }, 429);
+        const id = rec.ts + '-' + Math.random().toString(36).slice(2, 7);
+        await env.PRICES.put('fb:' + id, JSON.stringify(rec));
+        return json({ ok: true });
+      }
+      if (!admin) return json({ error: 'forbidden' }, 403);
+      if (request.method === 'GET') {
+        const ks = (await env.PRICES.list({ prefix: 'fb:', limit: 500 })).keys;
+        const items = [];
+        for (const k of ks) { const v = await env.PRICES.get(k.name); if (v) { try { const o = JSON.parse(v); o.id = k.name.slice(3); items.push(o); } catch (e) {} } }
+        items.sort((a, c) => c.ts - a.ts);
+        return json({ items });
+      }
+      if (request.method === 'DELETE') {
+        const id = url.searchParams.get('id') || '';
+        if (!/^[0-9a-z-]{5,40}$/.test(id)) return json({ error: 'bad id' }, 400);
+        await env.PRICES.delete('fb:' + id);
+        return json({ ok: true });
+      }
+      return json({ error: 'method not allowed' }, 405);
+    }
+
     if (url.pathname === '/admin.html' && !admin) return new Response('Not found', { status: 404 });
 
     if (url.pathname === '/api/count' && request.method === 'GET') {

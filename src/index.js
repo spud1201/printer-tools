@@ -63,7 +63,7 @@ function esc(s) {
 }
 
 function pendingPage(email) {
-  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Access requested</title>
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Access requested – Tonerly Quotes</title>
 <style>body{font-family:system-ui,sans-serif;margin:0;background:#f4f6f8;color:#1b2733;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:16px}
 .c{background:#fff;border-radius:12px;padding:28px;max-width:420px;box-shadow:0 2px 12px rgba(0,0,0,.08)}h1{font-size:20px;margin:0 0 12px}p{line-height:1.5;margin:8px 0}a{color:#0b5cad}</style></head>
 <body><div class="c"><h1>Access requested</h1><p>Thanks. Your request for <b>${esc(email)}</b> has been sent for approval.</p><p>Once it is approved, reload this page and you will be in. There is nothing else you need to do.</p><p><a href="/cdn-cgi/access/logout">Sign out</a></p></div></body></html>`;

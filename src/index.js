@@ -1,3 +1,25 @@
+import { EmailMessage } from 'cloudflare:email';
+
+// Emails the site owner (best effort; never blocks or breaks a request).
+async function notify(env, subject, text) {
+  try {
+    if (!env.NOTIFY || !env.NOTIFY_TO || !env.NOTIFY_FROM) return;
+    const clean = (v) => String(v).replace(/[\r\n]+/g, ' ').slice(0, 200);
+    const raw = [
+      'From: Tonerly Quotes <' + env.NOTIFY_FROM + '>',
+      'To: ' + env.NOTIFY_TO,
+      'Subject: ' + clean(subject),
+      'Date: ' + new Date().toUTCString(),
+      'Message-ID: <' + Date.now() + '.' + Math.random().toString(36).slice(2) + '@tonerlyquotes.ca>',
+      'MIME-Version: 1.0',
+      'Content-Type: text/plain; charset=utf-8',
+      '',
+      String(text).slice(0, 4000),
+    ].join('\r\n');
+    await env.NOTIFY.send(new EmailMessage(env.NOTIFY_FROM, env.NOTIFY_TO, raw));
+  } catch (e) { /* ignore */ }
+}
+
 // Saves each signed-in user's own prices, logo and clients (with saved quotes) in Workers KV.
 // The user is identified by the Cloudflare Access login token, which is verified here.
 
@@ -72,7 +94,7 @@ function pendingPage(email) {
 
 let COUNT = null;
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const isApi = url.pathname.startsWith('/api/');
     const email = await userEmail(request, env);
@@ -83,6 +105,7 @@ export default {
     if (!admin && !(await env.PRICES.get('ok:' + email))) {
       if (!(await env.PRICES.get('pend:' + email))) {
         await env.PRICES.put('pend:' + email, JSON.stringify({ t: Date.now() }), { expirationTtl: 60 * 86400 });
+        ctx.waitUntil(notify(env, 'New access request: ' + email, email + ' has asked for access to Tonerly Quotes.\n\nApprove or deny: https://tonerlyquotes.ca/admin.html'));
       }
       if (url.pathname === '/api/me') return json({ email, approved: false, admin: false });
       if (isApi) return json({ error: 'pending approval' }, 403);
@@ -126,6 +149,7 @@ export default {
         if (mine >= 500) return json({ error: 'too many reports waiting, try again later' }, 429);
         const id = rec.ts + '-' + Math.random().toString(36).slice(2, 7);
         await env.PRICES.put('fb:' + id, JSON.stringify(rec));
+        ctx.waitUntil(notify(env, 'Part number report: ' + rec.model, 'From: ' + email + '\nPrinter: ' + rec.model + '\nIssue: ' + rec.kind + '\nPart: ' + rec.part + '\nCorrect: ' + rec.correct + '\nDetails: ' + rec.details + '\n\nReview: https://tonerlyquotes.ca/admin.html'));
         return json({ ok: true });
       }
       if (!admin) return json({ error: 'forbidden' }, 403);

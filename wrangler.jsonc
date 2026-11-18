@@ -10,7 +10,12 @@
   "kv_namespaces": [
     { "binding": "PRICES", "id": "5c58bdc6cf7043ba96c5f9f2b74e00a0" }
   ],
+  "send_email": [
+    { "name": "NOTIFY", "destination_address": "amirothomas@gmail.com" }
+  ],
   "vars": {
+    "NOTIFY_TO": "amirothomas@gmail.com",
+    "NOTIFY_FROM": "notify@tonerlyquotes.ca",
     "ADMIN_EMAIL": "thomasamiro2@gmail.com",
     "TEAM_DOMAIN": "quiet-block-1c29.cloudflareaccess.com",
     "POLICY_AUD": "8829103bbec4e94fd854df2347175a2021879b4d26e3bb746d02494c613044a4"

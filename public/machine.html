@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Machine Quote – Tonerly Quotes</title>
+<style>
+:root{--bg:#F2F4F8;--surface:#FFFFFF;--ink:#121927;--muted:#566275;--line:#D8DEE8;--a:#2A59D6;--on-a:#fff;--danger:#c0392b;--font:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#0D121B;--surface:#151C28;--ink:#E9EDF4;--muted:#9AA6B8;--line:#263142;--a:#6F98FF;--on-a:#0D121B;--danger:#FF8A80}}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;padding:16px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:60rem;margin:0 auto;display:grid;gap:14px}
+a{color:var(--a)}
+h1{font-size:1.5rem;margin:0}
+h2{font-size:1.05rem;margin:0 0 10px}
+.sub{color:var(--muted);margin:2px 0 0;font-size:.92rem}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr))}
+label{display:block;font-size:.82rem;font-weight:600;color:var(--muted);margin-bottom:3px}
+input,select,textarea{width:100%;font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink)}
+textarea{resize:vertical}
+button{font:inherit;font-weight:600;padding:9px 14px;border-radius:9px;border:1px solid var(--a);background:var(--a);color:var(--on-a);cursor:pointer}
+button.g{background:transparent;color:var(--a)}
+button.x{background:transparent;color:var(--danger);border-color:var(--line);padding:6px 10px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row{display:grid;gap:8px;grid-template-columns:1fr 1fr;padding:10px 0;border-top:1px solid var(--line);align-items:end}
+.row:first-of-type{border-top:0}
+.row .wide{grid-column:1/-1}
+@media(min-width:44rem){.row.m{grid-template-columns:1fr 1.3fr 2fr 5rem 7rem auto}.row.o{grid-template-columns:3fr 5rem 7rem auto}.row .wide{grid-column:auto}}
+.tot{display:grid;gap:4px;justify-content:end;font-variant-numeric:tabular-nums}
+.tot div{display:flex;justify-content:space-between;gap:30px}
+.tot .big{font-weight:700;font-size:1.15rem;border-top:2px solid var(--ink);padding-top:6px;margin-top:4px}
+#msg{min-height:1.3em;font-size:.9rem}.ok{color:#1a7f45}.er{color:var(--danger)}
+.saved{display:flex;gap:8px;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.saved:first-child{border-top:0}
+#hdr{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+#hdr img{max-height:64px;max-width:200px}
+#co{white-space:pre-wrap;text-align:right;font-size:.9rem}
+.print-only{display:none}
+@media print{
+ body{background:#fff;color:#000;padding:0}
+ .noprint,button,.bar{display:none!important}
+ .card{border:0;padding:0;background:#fff;break-inside:avoid}
+ input,select,textarea{border:0;background:transparent;padding:2px 0;color:#000;appearance:none;-webkit-appearance:none}
+ textarea{resize:none}
+ ::placeholder{color:transparent}
+ .print-only{display:block}
+ .row{break-inside:avoid}
+ .wrap{max-width:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="noprint"><a href="index.html">&larr; Back to tools</a></div>
+
+<div class="card">
+  <div id="hdr">
+    <div><h1>Machine Quote</h1><p class="sub" id="byline"></p></div>
+    <div><img id="logo" alt="" hidden><div id="co"></div></div>
+  </div>
+</div>
+
+<div class="card noprint" id="savedcard" hidden>
+  <h2>Saved machine quotes for this customer</h2>
+  <div id="savedlist"></div>
+</div>
+
+<div class="card">
+  <h2>Customer and quote details</h2>
+  <div class="grid">
+    <div><label for="cust">Customer</label><input id="cust" list="clist" data-top="cust" placeholder="Type or pick a customer" autocomplete="off"><datalist id="clist"></datalist></div>
+    <div><label for="qno">Quote number</label><input id="qno" data-top="qno"></div>
+    <div><label for="qdate">Date</label><input id="qdate" type="date" data-top="qdate"></div>
+    <div><label for="valid">Valid until</label><input id="valid" type="date" data-top="valid"></div>
+  </div>
+  <div style="margin-top:10px"><label for="caddr">Customer address</label><textarea id="caddr" rows="2" data-top="caddr"></textarea></div>
+</div>
+
+<div class="card">
+  <h2>Machines</h2>
+  <div id="machines"></div>
+  <div class="noprint" style="margin-top:8px"><button class="g" data-add="machines">+ Add machine</button></div>
+</div>
+
+<div class="card">
+  <h2>Options and accessories</h2>
+  <div id="opts"></div>
+  <div class="noprint" style="margin-top:8px"><button class="g" data-add="opts">+ Add option</button></div>
+</div>
+
+<div class="card">
+  <h2>Services</h2>
+  <div id="svcs"></div>
+  <div class="noprint" style="margin-top:8px"><button class="g" data-add="svcs">+ Add service (delivery, install, training)</button></div>
+</div>
+
+<div class="card">
+  <h2>Supplies and service plan</h2>
+  <div class="grid">
+    <div><label for="supplies">Supplies included</label><input id="supplies" data-top="supplies" placeholder="e.g. Starter toner, 1 set on delivery"></div>
+    <div><label for="cppb">Cost per page, black ($)</label><input id="cppb" data-top="cppb" inputmode="decimal" placeholder="0.0100"></div>
+    <div><label for="cppc">Cost per page, colour ($)</label><input id="cppc" data-top="cppc" inputmode="decimal" placeholder="0.0600"></div>
+    <div><label for="plan">Service plan</label><input id="plan" data-top="plan" placeholder="e.g. Full service, on-site"></div>
+    <div><label for="planfee">Service fee ($ per month)</label><input id="planfee" data-top="planfee" inputmode="decimal"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Payment</h2>
+  <div class="grid">
+    <div><label for="ptype">Type</label><select id="ptype" data-top="ptype"><option>Purchase</option><option>Lease</option><option>Rental</option></select></div>
+    <div><label for="term">Term (months)</label><input id="term" data-top="term" inputmode="numeric"></div>
+    <div><label for="monthly">Monthly payment ($)</label><input id="monthly" data-top="monthly" inputmode="decimal"></div>
+    <div><label for="deposit">Deposit ($)</label><input id="deposit" data-top="deposit" inputmode="decimal"></div>
+    <div><label for="trade">Trade-in credit ($)</label><input id="trade" data-top="trade" inputmode="decimal"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Totals</h2>
+  <div class="grid" style="margin-bottom:12px">
+    <div><label for="disc">Discount</label><input id="disc" data-top="disc" inputmode="decimal"></div>
+    <div><label for="dtype">Discount type</label><select id="dtype" data-top="dtype"><option value="$">Dollars ($)</option><option value="%">Percent (%)</option></select></div>
+    <div><label for="tax">GST / tax (%)</label><input id="tax" data-top="tax" inputmode="decimal"></div>
+  </div>
+  <div class="tot" id="tot"></div>
+</div>
+
+<div class="card">
+  <h2>Notes and terms</h2>
+  <textarea id="notes" rows="5" data-top="notes"></textarea>
+  <div class="print-only" style="margin-top:36px">
+    <div style="display:flex;gap:40px"><div style="flex:1;border-top:1px solid #000;padding-top:4px">Customer signature</div><div style="flex:1;border-top:1px solid #000;padding-top:4px">Date</div></div>
+  </div>
+</div>
+
+<div class="card noprint">
+  <div class="bar">
+    <button id="save">Save to customer</button>
+    <button class="g" id="print">Print or save PDF</button>
+    <button class="g" id="new">New quote</button>
+  </div>
+  <p id="msg" role="status"></p>
+</div>
+</div>
+
+<script>
+function $(i){return document.getElementById(i)}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function n(x){x=parseFloat(x);return isFinite(x)?x:0}
+var FMT=new Intl.NumberFormat('en-CA',{style:'currency',currency:'CAD'});
+function money(x){return FMT.format(x)}
+function today(){return new Date().toISOString().slice(0,10)}
+function addDays(d){var t=new Date();t.setDate(t.getDate()+d);return t.toISOString().slice(0,10)}
+var NOTES='Prices are in Canadian dollars and exclude applicable taxes unless shown. Delivery and installation timing to be confirmed at order. Warranty per manufacturer terms.';
+function blank(){return{qid:'m'+Math.random().toString(36).slice(2,9),qno:'',qdate:today(),valid:addDays(30),cust:'',caddr:'',cid:'',
+ machines:[{b:'',m:'',d:'',q:1,p:''}],opts:[],svcs:[],supplies:'',cppb:'',cppc:'',plan:'',planfee:'',ptype:'Purchase',term:'',monthly:'',deposit:'',trade:'',disc:'',dtype:'$',tax:5,notes:NOTES,ts:0,total:0}}
+var S=blank(), CL={}, TOPS=['cust','qno','qdate','valid','caddr','supplies','cppb','cppc','plan','planfee','ptype','term','monthly','deposit','trade','disc','dtype','tax','notes'];
+
+function rowHtml(sec,i,r){
+  if(sec==='machines') return '<div class="row m" data-sec="machines" data-i="'+i+'">'+
+   '<div><label>Brand</label><input data-f="b" value="'+esc(r.b)+'"></div>'+
+   '<div><label>Model</label><input data-f="m" value="'+esc(r.m)+'"></div>'+
+   '<div><label>Description</label><input data-f="d" value="'+esc(r.d)+'" placeholder="e.g. A4 colour MFP, 35 ppm"></div>'+
+   '<div><label>Qty</label><input data-f="q" inputmode="numeric" value="'+esc(r.q)+'"></div>'+
+   '<div><label>Unit price ($)</label><input data-f="p" inputmode="decimal" value="'+esc(r.p)+'"></div>'+
+   '<div class="noprint"><button class="x" data-del="machines" data-i="'+i+'" aria-label="Remove">Remove</button></div></div>';
+  return '<div class="row o" data-sec="'+sec+'" data-i="'+i+'">'+
+   '<div><label>Description</label><input data-f="d" value="'+esc(r.d)+'"></div>'+
+   '<div><label>Qty</label><input data-f="q" inputmode="numeric" value="'+esc(r.q)+'"></div>'+
+   '<div><label>Unit price ($)</label><input data-f="p" inputmode="decimal" value="'+esc(r.p)+'"></div>'+
+   '<div class="noprint"><button class="x" data-del="'+sec+'" data-i="'+i+'" aria-label="Remove">Remove</button></div></div>';
+}
+function renderRows(){['machines','opts','svcs'].forEach(function(sec){$(sec).innerHTML=S[sec].map(function(r,i){return rowHtml(sec,i,r)}).join('')||'<p class="sub">None added.</p>'})}
+function renderTop(){TOPS.forEach(function(k){var e=$(k);if(e)e.value=S[k]==null?'':S[k]})}
+function calc(){
+  var sub=0;['machines','opts','svcs'].forEach(function(sec){S[sec].forEach(function(r){sub+=n(r.q)*n(r.p)})});
+  var d=S.dtype==='%'?sub*n(S.disc)/100:n(S.disc); if(d>sub)d=sub;
+  var after=sub-d, tax=after*n(S.tax)/100, total=after+tax, bal=total-n(S.trade)-n(S.deposit);
+  return{sub:sub,d:d,tax:tax,total:total,bal:bal};
+}
+function renderTot(){
+  var c=calc(),h='<div><span>Subtotal</span><span>'+money(c.sub)+'</span></div>';
+  if(c.d>0)h+='<div><span>Discount</span><span>&minus;'+money(c.d)+'</span></div>';
+  h+='<div><span>GST / tax ('+esc(S.tax||0)+'%)</span><span>'+money(c.tax)+'</span></div>';
+  h+='<div class="big"><span>Total</span><span>'+money(c.total)+'</span></div>';
+  if(n(S.trade)>0)h+='<div><span>Trade-in credit</span><span>&minus;'+money(n(S.trade))+'</span></div>';
+  if(n(S.deposit)>0)h+='<div><span>Deposit</span><span>&minus;'+money(n(S.deposit))+'</span></div>';
+  if(n(S.trade)>0||n(S.deposit)>0)h+='<div class="big"><span>Balance due</span><span>'+money(c.bal)+'</span></div>';
+  if(S.ptype!=='Purchase'&&n(S.monthly)>0)h+='<div><span>'+esc(S.ptype)+' payment</span><span>'+money(n(S.monthly))+' / month'+(n(S.term)>0?' &times; '+esc(S.term):'')+'</span></div>';
+  if(n(S.planfee)>0)h+='<div><span>Service plan</span><span>'+money(n(S.planfee))+' / month</span></div>';
+  $('tot').innerHTML=h; S.total=c.total;
+}
+function all(){renderTop();renderRows();renderTot();renderSaved()}
+
+document.addEventListener('input',function(e){
+  var t=e.target,k=t.getAttribute('data-top');
+  if(k){S[k]=t.value; if(k==='cust')matchClient(); renderTot(); return}
+  var f=t.getAttribute('data-f'); if(f){var r=t.closest('[data-sec]');S[r.getAttribute('data-sec')][+r.getAttribute('data-i')][f]=t.value;renderTot()}
+});
+document.addEventListener('change',function(e){if(e.target.getAttribute&&e.target.getAttribute('data-top')==='cust'){matchClient();renderTot()}});
+document.addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;
+  var add=b.getAttribute('data-add'),del=b.getAttribute('data-del');
+  if(add){S[add].push(add==='machines'?{b:'',m:'',d:'',q:1,p:''}:{d:'',q:1,p:''});renderRows();renderTot()}
+  if(del){S[del].splice(+b.getAttribute('data-i'),1);renderRows();renderTot()}
+});
+
+function matchClient(){
+  var nm=(S.cust||'').trim().toLowerCase(),hit='';
+  Object.keys(CL).forEach(function(id){if((CL[id].name||'').trim().toLowerCase()===nm)hit=id});
+  if(hit!==S.cid){S.cid=hit; if(hit&&!(S.caddr||'').trim()&&CL[hit].contact&&CL[hit].contact.address){S.caddr=CL[hit].contact.address;$('caddr').value=S.caddr} renderSaved()}
+}
+function renderSaved(){
+  var el=$('savedlist'),card=$('savedcard'),c=S.cid&&CL[S.cid],m=c&&c.machines?c.machines:null;
+  var ids=m?Object.keys(m).sort(function(a,b){return (m[b].ts||0)-(m[a].ts||0)}):[];
+  if(!ids.length){card.hidden=true;return}
+  card.hidden=false;el.innerHTML='';
+  ids.forEach(function(id){var q=m[id],d=document.createElement('div');d.className='saved';
+    var s=document.createElement('span');s.textContent=(q.qno?'#'+q.qno+' · ':'')+(q.qdate||'')+' · '+money(q.total||0)+(id===S.qid?' (open)':'');d.appendChild(s);
+    var w=document.createElement('span');
+    var o=document.createElement('button');o.className='g';o.textContent='Open';var cid=S.cid;o.onclick=function(){S=JSON.parse(JSON.stringify(q));S.cid=cid;S.qid=id;msg('');all()};w.appendChild(o);
+    var x=document.createElement('button');x.className='x';x.textContent='Delete';x.style.marginLeft='6px';x.onclick=function(){if(!confirm('Delete this saved machine quote?'))return;
+      put({id:S.cid,name:c.name,delm:id}).then(function(){delete c.machines[id];if(id===S.qid){var cid=S.cid;S=blank();S.cid=cid;S.cust=c.name;}all()}).catch(function(){msg('Could not delete.',1)})};w.appendChild(x);
+    d.appendChild(w);el.appendChild(d)});
+}
+function msg(t,bad){var m=$('msg');m.className=bad?'er':(t?'ok':'');m.textContent=t||''}
+function put(b){return fetch('/api/clients',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json().then(function(j){if(!r.ok||!j.ok)throw new Error(j.error||'failed');return j})})}
+
+$('save').onclick=function(){
+  var name=(S.cust||'').trim(); if(!name){msg('Enter a customer name first.',1);return}
+  matchClient();
+  var id=S.cid||('c'+Math.random().toString(36).slice(2,10)); S.ts=Date.now(); S.total=calc().total; S.cid=id;
+  var st=JSON.parse(JSON.stringify(S));
+  var body={id:id,name:name,tool:'machine',qid:S.qid,state:st};
+  if((S.caddr||'').trim()&&!(CL[id]&&CL[id].contact&&CL[id].contact.address)){body.contact=Object.assign({},CL[id]&&CL[id].contact||{},{address:S.caddr.trim()})}
+  msg('Saving…');
+  put(body).then(function(){CL[id]=CL[id]||{name:name};CL[id].name=name;CL[id].machines=CL[id].machines||{};CL[id].machines[S.qid]=st;
+    if(body.contact)CL[id].contact=body.contact; fillList(); msg('Saved to '+name+'.'); renderSaved()}).catch(function(e){msg('Could not save: '+e.message,1)});
+};
+$('print').onclick=function(){window.print()};
+$('new').onclick=function(){if(!confirm('Start a new quote? Unsaved changes will be lost.'))return;S=blank();msg('');all()};
+function fillList(){var dl=$('clist');dl.innerHTML='';Object.keys(CL).map(function(i){return CL[i].name}).sort().forEach(function(nm){var o=document.createElement('option');o.value=nm;dl.appendChild(o)})}
+
+fetch('/api/clients',{headers:{accept:'application/json'}}).then(function(r){return r.ok?r.json():{clients:{}}}).then(function(j){CL=j.clients||{};fillList();
+  var q=new URLSearchParams(location.search).get('c'); if(q&&CL[q]){S.cid=q;S.cust=CL[q].name;S.caddr=(CL[q].contact||{}).address||'';all()}}).catch(function(){});
+fetch('/api/profile',{headers:{accept:'application/json'}}).then(function(r){return r.ok?r.json():{}}).then(function(j){
+  $('co').textContent=j.company||''; $('byline').textContent=j.by?'Prepared by '+j.by:''}).catch(function(){});
+fetch('/api/logo',{headers:{accept:'application/json'}}).then(function(r){return r.ok?r.json():{}}).then(function(j){if(j.logo){$('logo').src=j.logo;$('logo').hidden=false}}).catch(function(){});
+all();
+</script>
+</body>
+</html>

@@ -264,6 +264,14 @@ export default {
             rec.quotes[body.qid] = body.state;
           }
         }
+        if (body.tool === 'machine') {
+          if (!body.state || typeof body.state !== 'object' || JSON.stringify(body.state).length > MAX_STATE) return json({ error: 'quote too large' }, 400);
+          if (typeof body.qid !== 'string' || !/^m[a-z0-9]{1,24}$/.test(body.qid)) return json({ error: 'bad quote id' }, 400);
+          rec.machines = rec.machines || {};
+          if (!(body.qid in rec.machines) && Object.keys(rec.machines).length >= MAX_QUOTES) return json({ error: 'too many machine quotes for this client' }, 400);
+          rec.machines[body.qid] = body.state;
+        }
+        if (typeof body.delm === 'string' && rec.machines && body.delm in rec.machines) delete rec.machines[body.delm];
         if (typeof body.delq === 'string' && !(rec.quotes && Object.keys(rec.quotes).length) && rec.quote && (rec.quote.qid || 'q0') === body.delq) delete rec.quote;
         if (typeof body.delq === 'string' && rec.quotes && body.delq in rec.quotes) {
           delete rec.quotes[body.delq];

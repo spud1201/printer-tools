@@ -172,9 +172,9 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
     <div class="hint" id="pickmsg">183 models from Brother, Lexmark, HP, Xerox, Canon and Epson.</div>
   </section>
 
+  <div id="parts" class="wrap" style="gap:14px"></div>
   <div id="colrow" class="hint" hidden style="padding:0 2px"><button class="link" type="button" id="colall">Collapse all printers</button> &nbsp;·&nbsp; <button class="link" type="button" id="expall">Expand all</button></div>
   <div id="lines" class="wrap" style="gap:14px"></div>
-  <div id="parts" class="wrap" style="gap:14px"></div>
 
   <section class="card" aria-label="Totals">
     <h2>Totals</h2>
@@ -437,6 +437,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     if(S.qco) h+='<p class="co">'+esc(S.qco)+'</p>';
     h+='<div class="meta"><div>Date: '+esc(S.qdate||'')+'</div><div>Customer: '+esc(S.cust||'')+(S.caddr?'<br>'+esc(S.caddr):'')+'</div><div>Prepared by: '+esc(S.qby||'')+'</div></div>';
     h+='<table><thead><tr><th>Item</th><th class="n">Qty</th><th class="n">Unit price</th><th class="n">Amount</th></tr></thead><tbody>';
+    partRows().forEach(function(r){ h+=r; });
     S.lines.forEach(function(l){
       var p=DATA[l.key];
       h+='<tr class="pr"><td>'+esc(p.n)+'</td><td class="n">'+esc(l.qty)+'</td><td class="n"></td><td class="n"></td></tr>';
@@ -446,7 +447,6 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       });
       l.extras.forEach(function(e){ if(e.desc||e.price) h+='<tr class="sub"><td>'+esc(e.desc||'Supply')+'</td><td class="n">'+esc(e.qty)+'</td><td class="n">'+(e.price==null||e.price===''?'':money(e.price))+'</td><td class="n">'+money((+e.price||0)*(+e.qty||0))+'</td></tr>'; });
     });
-    partRows().forEach(function(r){ h+=r; });
     h+='</tbody></table><div class="totals"><div><span>Subtotal</span><span>'+money(sub)+'</span></div><div><span>Tax ('+(+S.tax||0)+'%)</span><span>'+money(tax)+'</span></div><div class="gt"><span>Total</span><span>'+money(sub+tax)+'</span></div></div>';
     h+='<p class="fine">Prices in Canadian dollars.</p></div>';
     $('printdoc').innerHTML=h;
@@ -459,6 +459,8 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     if(S.caddr) o.push('Address: '+S.caddr);
     if(S.qby) o.push('Prepared by: '+S.qby);
     o.push('');
+    if((S.parts||[]).length){ o.push('Parts'); S.parts.forEach(function(x){ o.push('   '+partLabel(x)+'  '+x.qty+' x '+(x.price==null||x.price===''?'(price needed)':money(x.price))+' = '+money(partTotal(x))); }); }
+    if((S.parts||[]).length) o.push('');
     S.lines.forEach(function(l,ix){
       var p=DATA[l.key];
       o.push((ix+1)+'. '+p.n+'  x '+l.qty);
@@ -468,7 +470,6 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       });
       l.extras.forEach(function(e){ if(e.desc||e.price) o.push('   Supply: '+(e.desc||'')+'  '+e.qty+' x '+money(e.price)+' = '+money((+e.price||0)*(+e.qty||0))); });
     });
-    if((S.parts||[]).length){ o.push('Parts'); S.parts.forEach(function(x){ o.push('   '+partLabel(x)+'  '+x.qty+' x '+(x.price==null||x.price===''?'(price needed)':money(x.price))+' = '+money(partTotal(x))); }); }
     o.push('');
     o.push('Subtotal: '+money(sub));
     o.push('Tax ('+(+S.tax||0)+'%): '+money(tax)); o.push('Total: '+money(sub+tax));
@@ -721,7 +722,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     if(!S.parts) S.parts=[];
     x.uid=Date.now()+Math.floor(Math.random()*1000); x.qty=1;
     var sv=savedFor(pKey(x)); x.price=sv!=null?sv:(x.p!=null?x.p:null); x.base=x.p!=null?x.p:null;
-    S.parts.push(x); save(); render();
+    S.parts.unshift(x); save(); render();
   }
   function initParts(){
     var btn=$('pbtn'), pan=$('ppanel'), inp=$('ppick'), box=$('presults'), list=[];
@@ -743,7 +744,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       var b=e.target.closest('button'); if(!b) return;
       if(b.getAttribute('data-pc')) addPart({custom:true,desc:inp.value.trim(),p:null});
       else { var it=list[+b.getAttribute('data-pi')]; if(!it) return; addPart({t:it.t,key:it.key,kind:it.kind,y:it.y,ph:it.ph,p:it.p}); }
-      inp.value=''; box.hidden=true; $('pickmsg').textContent='Part added below the printers.';
+      inp.value=''; box.hidden=true; $('pickmsg').textContent='Part added at the top of the quote.';
     });
     var pb=$('parts');
     pb.addEventListener('input',function(e){

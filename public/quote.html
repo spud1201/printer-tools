@@ -164,11 +164,17 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
       <input id="pick" type="search" autocomplete="off" placeholder="Brand or model" aria-label="Printer">
       <button id="addbtn" class="primary" type="button">Add</button>
     </div>
+    <div style="margin-top:6px"><button class="link" type="button" id="pbtn" aria-expanded="false">Only have a part number? Add by part number</button></div>
+    <div id="ppanel" hidden style="margin-top:8px;display:grid;gap:8px">
+      <input id="ppick" type="search" autocomplete="off" placeholder="Toner, ink or drum part number" aria-label="Part number">
+      <div id="presults" class="sugg" hidden></div>
+    </div>
     <div class="hint" id="pickmsg">183 models from Brother, Lexmark, HP, Xerox, Canon and Epson.</div>
   </section>
 
   <div id="colrow" class="hint" hidden style="padding:0 2px"><button class="link" type="button" id="colall">Collapse all printers</button> &nbsp;·&nbsp; <button class="link" type="button" id="expall">Expand all</button></div>
   <div id="lines" class="wrap" style="gap:14px"></div>
+  <div id="parts" class="wrap" style="gap:14px"></div>
 
   <section class="card" aria-label="Totals">
     <h2>Totals</h2>
@@ -334,6 +340,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
         l.toners.forEach(function(sp){ var k=partKey(p.c,sp); if(k&&SAVED[k]!=null&&sp.opt>=0&&p.c[sp.opt].p===sp.price) sp.price=SAVED[k]; });
         var kd=partKey(p.d,l.drum); if(kd&&SAVED[kd]!=null&&l.drum.opt>=0&&p.d[l.drum.opt].p===l.drum.price) l.drum.price=SAVED[kd];
       });
+      (S.parts||[]).forEach(function(x){ var k=pKey(x); if(!x.custom&&k&&SAVED[k]!=null&&x.base===x.price) x.price=SAVED[k]; });
       render();
     }).catch(function(){});
   }
@@ -413,11 +420,13 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     if(!S.lines.length){ box.innerHTML='<div class="card empty">No printers yet. Pick one above to start the quote.</div>'; }
     else box.innerHTML=S.lines.map(lineHtml).join('');
     $('colrow').hidden=S.lines.length<2;
+    renderParts();
     totals();
   }
   function totals(){
     var pr=0,su=0;
     S.lines.forEach(function(l){ var t=lineTotals(l); pr+=t.pr; su+=t.su; var el=document.querySelector('[data-uid="'+l.uid+'"] [data-lt]'); if(el) el.textContent=money(t.pr+t.su); var el2=document.querySelector('[data-uid="'+l.uid+'"] [data-lts]'); if(el2) el2.textContent=money(t.pr+t.su); var ce=document.querySelector('[data-uid="'+l.uid+'"] [data-cpp]'); if(ce) ce.textContent=cppTxt(cpp(l,DATA[l.key],false)); });
+    (S.parts||[]).forEach(function(x){ su+=partTotal(x); var e=document.querySelector('[data-pid="'+x.uid+'"] [data-pt]'); if(e) e.textContent=money(partTotal(x)); });
     var sub=pr+su, tax=sub*((+S.tax||0)/100);
     $('s-sub').textContent=money(sub); $('s-tax').textContent=money(tax); $('s-tot').textContent=money(sub+tax);
     $('qtext').value=quoteText(pr,su,sub,tax);
@@ -437,6 +446,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       });
       l.extras.forEach(function(e){ if(e.desc||e.price) h+='<tr class="sub"><td>'+esc(e.desc||'Supply')+'</td><td class="n">'+esc(e.qty)+'</td><td class="n">'+(e.price==null||e.price===''?'':money(e.price))+'</td><td class="n">'+money((+e.price||0)*(+e.qty||0))+'</td></tr>'; });
     });
+    partRows().forEach(function(r){ h+=r; });
     h+='</tbody></table><div class="totals"><div><span>Subtotal</span><span>'+money(sub)+'</span></div><div><span>Tax ('+(+S.tax||0)+'%)</span><span>'+money(tax)+'</span></div><div class="gt"><span>Total</span><span>'+money(sub+tax)+'</span></div></div>';
     h+='<p class="fine">Prices in Canadian dollars.</p></div>';
     $('printdoc').innerHTML=h;
@@ -458,6 +468,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       });
       l.extras.forEach(function(e){ if(e.desc||e.price) o.push('   Supply: '+(e.desc||'')+'  '+e.qty+' x '+money(e.price)+' = '+money((+e.price||0)*(+e.qty||0))); });
     });
+    if((S.parts||[]).length){ o.push('Parts'); S.parts.forEach(function(x){ o.push('   '+partLabel(x)+'  '+x.qty+' x '+(x.price==null||x.price===''?'(price needed)':money(x.price))+' = '+money(partTotal(x))); }); }
     o.push('');
     o.push('Subtotal: '+money(sub));
     o.push('Tax ('+(+S.tax||0)+'%): '+money(tax)); o.push('Total: '+money(sub+tax));
@@ -668,8 +679,105 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       clApi('DELETE','?id='+encodeURIComponent(CUR)).then(function(){ delete CL[CUR]; CUR=''; try{ localStorage.setItem(clKey(),''); }catch(e){} clRender(); clMsg(n+' deleted.'); }).catch(function(){ clMsg('Could not delete. Try again.'); });
     });
   }
+
+  /* ---- parts added by number (no printer) ---- */
+  var PIDX=null;
+  function pNorm(s){ return String(s==null?'':s).toLowerCase().replace(/[^a-z0-9]/g,''); }
+  function buildPIdx(){
+    if(PIDX) return PIDX; var m={};
+    DATA.forEach(function(p){ if(p.x) return;
+      [['Toner or ink',p.c],['Drum',p.d]].forEach(function(a){ (a[1]||[]).forEach(function(it){
+        var key=(it.ph?'compat ':'')+it.t, k=a[0]+'|'+key, e=m[k];
+        if(!e) e=m[k]={t:it.t,key:key,kind:a[0],y:it.y,p:it.p,ph:!!it.ph,pr:[]};
+        if(e.pr.length<400) e.pr.push(p.n);
+      }); });
+    });
+    PIDX=Object.keys(m).map(function(k){ return m[k]; }); return PIDX;
+  }
+  function pKey(x){ if(x.custom) return (x.desc&&x.desc.trim())?'custom '+x.desc.trim():null; return x.key; }
+  function partLabel(x){ return x.custom?(x.desc||'Part'):((x.ph?'Compatible ':'')+x.t+(x.kind?' ('+x.kind+')':'')); }
+  function partTotal(x){ return (+x.price||0)*(+x.qty||0); }
+  function partRows(){
+    var r=(S.parts||[]); if(!r.length) return [];
+    var o=['<tr class="pr"><td>Parts</td><td class="n"></td><td class="n"></td><td class="n"></td></tr>'];
+    r.forEach(function(x){ o.push('<tr class="sub"><td>'+esc(partLabel(x))+'</td><td class="n">'+esc(x.qty)+'</td><td class="n">'+(x.price==null||x.price===''?'':money(x.price))+'</td><td class="n">'+money(partTotal(x))+'</td></tr>'); });
+    return o;
+  }
+  function partHtml(x){
+    var h='<article class="card line" data-pid="'+x.uid+'"><div class="line-head"><div style="min-width:0;flex:1"><h3>'+esc(x.custom?'Custom item':x.t)+'</h3><div class="type">'+esc(x.custom?'Not on the site. Enter the details below.':((x.ph?'Compatible ':'')+x.kind+(x.y?' · '+x.y.toLocaleString('en-US')+' pg':'')))+'</div></div><button class="del" type="button" data-pact="del" aria-label="Remove part">×</button></div>';
+    h+='<div class="lbody">';
+    if(x.custom) h+='<label>Part number or description<input type="text" data-pf="desc" value="'+esc(x.desc||'')+'" placeholder="Enter part number"></label>';
+    h+='<div class="row"><div class="need">'+((x.price==null||x.price==='')?'Price needed':'')+'</div><label>Qty<input class="num" type="number" min="0" step="1" data-pf="qty" value="'+esc(x.qty)+'"></label><label>Unit price<input class="num" type="number" min="0" step="0.01" data-pf="price" value="'+(x.price==null?'':esc(x.price))+'" placeholder="0.00"></label></div>';
+    h+='<div class="savep" data-savep>'+savInner(pKey(x),x.price)+'</div>';
+    h+='<div class="line-total"><span>Total</span><span class="mono" data-pt>'+money(partTotal(x))+'</span></div></div></article>';
+    return h;
+  }
+  function renderParts(){
+    var box=$('parts'); if(!box) return; var r=S.parts||[];
+    box.innerHTML=r.length?'<h2 style="font-size:1.05rem;margin:4px 2px 0">Parts</h2>'+r.map(partHtml).join(''):'';
+  }
+  function findPart(el){ var a=el.closest('[data-pid]'); if(!a) return null; var u=+a.getAttribute('data-pid'); return (S.parts||[]).filter(function(x){ return x.uid===u; })[0]||null; }
+  function addPart(x){
+    if(!S.parts) S.parts=[];
+    x.uid=Date.now()+Math.floor(Math.random()*1000); x.qty=1;
+    var sv=savedFor(pKey(x)); x.price=sv!=null?sv:(x.p!=null?x.p:null); x.base=x.p!=null?x.p:null;
+    S.parts.push(x); save(); render();
+  }
+  function initParts(){
+    var btn=$('pbtn'), pan=$('ppanel'), inp=$('ppick'), box=$('presults'), list=[];
+    btn.addEventListener('click',function(){ var o=pan.hidden; pan.hidden=!o; btn.setAttribute('aria-expanded',o?'true':'false'); if(o) inp.focus(); });
+    function show(){
+      var q=pNorm(inp.value); if(!q){ box.hidden=true; return; }
+      list=buildPIdx().filter(function(e){ return pNorm(e.t).indexOf(q)>=0; });
+      list.sort(function(a,b){ var A=pNorm(a.t)===q?0:pNorm(a.t).indexOf(q)===0?1:2, B=pNorm(b.t)===q?0:pNorm(b.t).indexOf(q)===0?1:2; return A-B||(a.t<b.t?-1:1); });
+      var h='';
+      list.slice(0,30).forEach(function(e,i){
+        h+='<button type="button" data-pi="'+i+'"><strong>'+esc(e.t)+'</strong> · '+esc(e.kind)+(e.ph?' (compatible)':'')+(e.y?' · '+e.y.toLocaleString('en-US')+' pg':'')+'<br><span class="hint">Fits '+esc(e.pr.slice(0,3).join(', '))+(e.pr.length>3?' and '+(e.pr.length-3)+' more':'')+'</span></button>';
+      });
+      if(list.length>30) h+='<div class="none">Showing 30 of '+list.length+'. Keep typing to narrow it down.</div>';
+      h+='<button type="button" data-pc="1">'+(list.length?'Not the one? ':'Not on the site. ')+'Add "'+esc(inp.value.trim())+'" as a custom item</button>';
+      box.innerHTML=h; box.hidden=false; box.scrollTop=0;
+    }
+    inp.addEventListener('input',show);
+    box.addEventListener('click',function(e){
+      var b=e.target.closest('button'); if(!b) return;
+      if(b.getAttribute('data-pc')) addPart({custom:true,desc:inp.value.trim(),p:null});
+      else { var it=list[+b.getAttribute('data-pi')]; if(!it) return; addPart({t:it.t,key:it.key,kind:it.kind,y:it.y,ph:it.ph,p:it.p}); }
+      inp.value=''; box.hidden=true; $('pickmsg').textContent='Part added below the printers.';
+    });
+    var pb=$('parts');
+    pb.addEventListener('input',function(e){
+      var el=e.target, x=findPart(el); if(!x) return; var f=el.getAttribute('data-pf'); if(!f) return;
+      x[f]=el.value;
+      if(f==='price'||f==='desc'){ var sv=el.closest('[data-pid]').querySelector('[data-savep]'); if(sv) sv.innerHTML=savInner(pKey(x),x.price); }
+      save(); totals();
+    });
+    pb.addEventListener('click',function(e){
+      var b=e.target.closest('button'); if(!b) return; var x=findPart(b); if(!x) return;
+      var act=b.getAttribute('data-pact')||b.getAttribute('data-act'), key=pKey(x);
+      if(act==='del'){ S.parts=S.parts.filter(function(y){ return y!==x; }); }
+      else if(act==='savep'){ savePrice(key,x.price); }
+      else if(act==='setcost'||act==='delcost'){
+        if(!key||!SAVED_ON) return; var ck='cost '+key;
+        if(act==='delcost') savePrice(ck,'');
+        else { var ans=window.prompt('Your cost for '+key+' (private, never shown on the customer quote). Leave blank to remove.',SAVED[ck]!=null?SAVED[ck]:''); if(ans===null) return; ans=String(ans).replace(/[^0-9.]/g,''); if(ans!==''&&!(isFinite(+ans)&&+ans>=0)) return; savePrice(ck,ans); }
+      }
+      else if(act==='savec'||act==='delc'){
+        var cid=CUR, cl=CL[cid]; if(!cl||!key||!isFinite(+x.price)) return;
+        var val=(act==='delc')?null:Math.round(+x.price*100)/100;
+        clApi('PUT','',{id:cid,name:cl.name,cprice:{key:key,price:val}}).then(function(){
+          cl.prices=cl.prices||{}; if(val==null) delete cl.prices[key]; else cl.prices[key]=val;
+          clMsg(val==null?('Removed the '+cl.name+' price for '+key+'.'):('Saved '+key+' at '+money(val)+' for '+cl.name+'.')); render();
+        }).catch(function(){ clMsg('Could not save the price for '+cl.name+'.'); });
+        return;
+      }
+      else return;
+      save(); render();
+    });
+  }
   function init(){
     load();
+    initParts();
     (function(){ var n=0,b=[]; DATA.forEach(function(p){ if(p.x) return; n++; if(b.indexOf(p.b)<0) b.push(p.b); }); var bl=b.length>1?b.slice(0,-1).join(', ')+' and '+b[b.length-1]:b.join(''); $('pickmsg').textContent=n.toLocaleString('en-US')+' models from '+bl+'.'; })();
     if(!S.qno) S.qno=newNo(); if(!S.qdate) S.qdate=today(); if(!S.qid) S.qid=newQid();
     fill('cust','cust'); fill('caddr','caddr'); fill('qno','qno'); fill('qdate','qdate'); fill('qby','qby'); fill('qco','qco');

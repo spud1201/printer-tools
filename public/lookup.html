@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Quick Lookup – Tonerly Quotes</title>
+<style>
+:root{--bg:#F2F4F8;--surface:#FFFFFF;--ink:#121927;--muted:#566275;--line:#D8DEE8;--a:#2A59D6;--on-a:#FFFFFF;--font:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#0D121B;--surface:#151C28;--ink:#E9EDF4;--muted:#9AA6B8;--line:#263142;--a:#6F98FF;--on-a:#0D121B;color-scheme:dark}}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;padding:20px max(16px,env(safe-area-inset-right,0px)) 48px max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:46rem;margin:0 auto;display:grid;gap:14px}
+a{color:var(--a)}
+h1{font-size:1.6rem;margin:0 0 4px}
+h2{font-size:1.05rem;margin:0 0 6px}
+.sub,.hint{color:var(--muted);font-size:.92rem;margin:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:10px}
+input[type=search]{width:100%;font:inherit;font-size:16px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+.res{max-height:22rem;overflow-y:auto;border:1px solid var(--line);border-radius:10px}
+.res .grp{padding:8px 12px;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+.res button{display:block;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:transparent;color:var(--ink);font:inherit;padding:12px;min-height:44px;overflow-wrap:anywhere;cursor:pointer}
+.res .none{padding:12px;color:var(--muted)}
+ul{margin:0;padding:0;list-style:none;display:grid;gap:6px}
+li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line)}
+li:first-child{border-top:0}
+.y{color:var(--muted);white-space:nowrap;font-size:.9rem}
+.t{font-weight:600;overflow-wrap:anywhere}
+.sec{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.link{background:none;border:0;color:var(--a);font:inherit;padding:0;text-align:left;cursor:pointer;text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <p style="margin:0 0 6px;font-size:.85rem"><a href="index.html" style="text-decoration:none">&larr; All tools</a></p>
+    <h1>Quick Lookup</h1>
+    <p class="sub">Type a printer model or a toner, ink or drum part number. No quote needed.</p>
+  </div>
+  <section class="card">
+    <input id="q" type="search" autocomplete="off" placeholder="Model (MX317) or part number (51B1)" aria-label="Printer or part number">
+    <div id="res" class="res" hidden></div>
+    <div class="hint" id="msg">Loading printers...</div>
+  </section>
+  <div id="out" class="wrap" style="gap:14px"></div>
+</div>
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i);}, DATA=[], PIDX=[];
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function nm(p){return p.m.indexOf(p.b)===0?p.m:p.b+' '+p.m;}
+  function nz(s){return String(s==null?'':s).toLowerCase().replace(/[^a-z0-9]/g,'');}
+  function ym(y){return y?y.toLocaleString('en-US')+' pg':'';}
+  function match(name,q){var n=nz(name),qq=nz(q); if(!qq) return false; if(n.indexOf(qq)>=0) return true; return String(q).toLowerCase().split(/\s+/).every(function(t){t=nz(t);return !t||n.indexOf(t)>=0;});}
+  fetch('quote.html').then(function(r){return r.text();}).then(function(t){
+    var m=/var DATA = (\[.*?\]);\n/s.exec(t); DATA=JSON.parse(m[1]).filter(function(p){return !p.x;});
+    DATA.forEach(function(p){p.n=nm(p);});
+    var map={};
+    DATA.forEach(function(p){[['Toner or ink',p.c],['Drum',p.d]].forEach(function(a){(a[1]||[]).forEach(function(it){
+      var k=a[0]+'|'+it.t, e=map[k]; if(!e) e=map[k]={t:it.t,kind:a[0],y:it.y,ph:!!it.ph,pr:[]}; e.pr.push(p);
+    });});});
+    PIDX=Object.keys(map).map(function(k){return map[k];});
+    $('msg').textContent=DATA.length.toLocaleString('en-US')+' printers on file.';
+    $('q').focus();
+  }).catch(function(){ $('msg').textContent='Could not load the printer list. Refresh and try again.'; });
+  var pm=[],pp=[];
+  function show(){
+    var q=$('q').value.trim(), box=$('res'); if(!q){box.hidden=true;return;}
+    pm=DATA.filter(function(p){return match(p.n,q);}).slice(0,40);
+    var qq=nz(q);
+    pp=PIDX.filter(function(e){return nz(e.t).indexOf(qq)>=0;}).slice(0,40);
+    var h='';
+    if(pm.length){h+='<div class="grp">Printers</div>'; pm.forEach(function(p,i){h+='<button type="button" data-p="'+i+'">'+esc(p.n)+'</button>';});}
+    if(pp.length){h+='<div class="grp">Part numbers</div>'; pp.forEach(function(e,i){h+='<button type="button" data-t="'+i+'"><strong>'+esc(e.t)+'</strong> · '+esc(e.kind)+(e.y?' · '+ym(e.y):'')+'</button>';});}
+    if(!h) h='<div class="none">No printer or part number matches.</div>';
+    box.innerHTML=h; box.hidden=false; box.scrollTop=0;
+  }
+  $('q').addEventListener('input',show);
+  function list(a){return a&&a.length?'<ul>'+a.map(function(i){return '<li><span class="t">'+esc((i.ph?'Compatible ':'')+i.t)+'</span><span class="y">'+ym(i.y)+'</span></li>';}).join('')+'</ul>':'<p class="hint">None on file.</p>';}
+  function showPrinter(p){
+    var h='<section class="card"><h2>'+esc(p.n)+'</h2>'+(p.t?'<p class="hint">'+esc(p.t)+'</p>':'');
+    h+='<div class="sec">Toner or ink</div>'+list(p.c)+'<div class="sec">Drum or imaging</div>'+list(p.d);
+    if(p.s) h+='<details><summary>Parts on file</summary><p class="hint">'+esc(p.s)+'</p></details>';
+    $('out').innerHTML=h+'</section>';
+  }
+  function showPart(e){
+    var h='<section class="card"><h2>'+esc(e.t)+'</h2><p class="hint">'+esc(e.kind)+(e.y?' · '+ym(e.y):'')+' · fits '+e.pr.length+' printer'+(e.pr.length===1?'':'s')+'</p><ul>';
+    e.pr.slice(0,300).forEach(function(p){ h+='<li><button class="link" type="button" data-n="'+esc(p.n)+'">'+esc(p.n)+'</button></li>'; });
+    $('out').innerHTML=h+'</ul></section>';
+  }
+  $('res').addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b) return;
+    if(b.hasAttribute('data-p')) showPrinter(pm[+b.getAttribute('data-p')]); else if(b.hasAttribute('data-t')) showPart(pp[+b.getAttribute('data-t')]); else return;
+    $('res').hidden=true; window.scrollTo(0,0);
+  });
+  $('out').addEventListener('click',function(e){
+    var b=e.target.closest('button[data-n]'); if(!b) return;
+    var n=b.getAttribute('data-n'); DATA.forEach(function(p){ if(p.n===n) showPrinter(p); }); window.scrollTo(0,0);
+  });
+})();
+</script>
+</body>
+</html>

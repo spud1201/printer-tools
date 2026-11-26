@@ -169,7 +169,8 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function name(p){return p.m.indexOf(p.b)===0?p.m:p.b+' '+p.m;}
   DATA.forEach(function(p,i){ p.i=i; p.n=name(p); });
-  var CL={}, OPENAP={}, PMSG={}, LASTF={};
+  var CL={}, OPENAP={}, PMSG={}, LASTF={}, SAVED={};
+  function priceFor(c,x){ var k=x.t; if(c&&c.prices&&c.prices[k]!=null) return +c.prices[k]; if(SAVED[k]!=null) return +SAVED[k]; return x.p; }
   // printers a client has on their saved quotes: model index -> total qty, plus the parts picked
   function printersFor(c){
     var map={},order=[];
@@ -194,7 +195,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     if(!c){ out.innerHTML=''; $('copycard').hidden=true; return; }
     var ps=printersFor(c), h='', t='Supplies for '+c.name+'\n';
     if(!ps.length){ out.innerHTML='<section class="card"><div class="hint">'+esc(c.name)+' has no printers saved yet. Add printers in a quote tool and press Save to client.</div></section>'; $('copycard').hidden=true; return; }
-    h+='<section class="card"><h2>'+esc(c.name)+'</h2><div class="hint">'+ps.length+' printer model'+(ps.length>1?'s':'')+'. List prices in Canadian dollars. Eco fees not included.</div></section>';
+    h+='<section class="card"><h2>'+esc(c.name)+'</h2><div class="hint">'+ps.length+' printer model'+(ps.length>1?'s':'')+'. Prices in Canadian dollars: the client saved price, then your saved price, then list price. Eco fees not included.</div></section>';
     ps.forEach(function(e){
       var p=e.p; t+='\n'+name(p)+(e.qty>1?' x '+e.qty:'')+'\n';
       h+='<section class="card"><div class="line-head"><h3>'+esc(name(p))+(e.qty>1?' <span class="type">x '+e.qty+'</span>':'')+'</h3><button class="del noprint" type="button" data-rm="'+p.i+'" aria-label="Remove '+esc(name(p))+' from this client" title="Remove from client">&times;</button></div><div class="type">'+esc(p.t||'')+'</div>';
@@ -205,8 +206,8 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
           if(hid.indexOf(g[0]+'|'+x.t)>=0){ nh++; return; }
           any=true;
           var on=!!e.picked[x.t];
-          h+='<div class="sup"><span class="k">'+g[0]+'</span><span class="pn">'+esc(x.t)+(on?' <span class="on">on quote</span>':'')+'</span><span class="pr">'+(x.p?fmt.format(x.p):'ask')+'</span><button class="x noprint" type="button" data-hide="'+g[0]+'|'+esc(x.t)+'" data-k="'+p.i+'" aria-label="Remove '+esc(x.t)+' from this printer" title="Remove from this printer">&times;</button>'+(x.y?'<span class="yl">'+x.y.toLocaleString('en-US')+' pages</span>':'')+'<span class="act noprint"><button class="link" type="button" data-compat="'+g[0]+'|'+esc(x.t)+'" data-k="'+p.i+'">+ Add compatible</button></span></div>';
-          t+='  '+g[0]+': '+x.t+(x.y?' ('+x.y.toLocaleString('en-US')+' pg)':'')+(x.p?' '+fmt.format(x.p):'')+'\n';
+          h+='<div class="sup"><span class="k">'+g[0]+'</span><span class="pn">'+esc(x.t)+(on?' <span class="on">on quote</span>':'')+'</span><span class="pr">'+(priceFor(c,x)?fmt.format(priceFor(c,x)):'ask')+'</span><button class="x noprint" type="button" data-hide="'+g[0]+'|'+esc(x.t)+'" data-k="'+p.i+'" aria-label="Remove '+esc(x.t)+' from this printer" title="Remove from this printer">&times;</button>'+(x.y?'<span class="yl">'+x.y.toLocaleString('en-US')+' pages</span>':'')+'<span class="act noprint"><button class="link" type="button" data-compat="'+g[0]+'|'+esc(x.t)+'" data-k="'+p.i+'">+ Add compatible</button></span></div>';
+          t+='  '+g[0]+': '+x.t+(x.y?' ('+x.y.toLocaleString('en-US')+' pg)':'')+(priceFor(c,x)?' '+fmt.format(priceFor(c,x)):'')+'\n';
         });
       });
       ext.forEach(function(x,xi){
@@ -361,6 +362,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t.value).then(ok,fb); } else fb();
   });
   DATA.forEach(function(p){});
+  fetch('/api/prices',{headers:{accept:'application/json'}}).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(j){ SAVED=j.prices||{}; render(); }).catch(function(){});
   fetch('/api/clients',{headers:{accept:'application/json'}}).then(function(r){ if(!r.ok) throw 0; return r.json(); }).then(function(j){ CL=j.clients||{}; fillSel(); })
     .catch(function(){ $('sel').innerHTML='<option value="">Sign in to see clients</option>'; $('msg').textContent='Could not load clients. Open this page from the main site while signed in.'; });
 })();

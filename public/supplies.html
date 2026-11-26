@@ -106,7 +106,9 @@ details p{margin:.4rem 0 0;font-family:var(--font-data);font-size:.78rem;color:v
 .sup .k{color:var(--muted);font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 .pnote{display:grid;gap:4px;margin-top:2px;font-size:.8rem}
 .pnprint{display:none}
-@media print{.pnprint{display:block;font-size:10pt;margin-top:4px}}
+@media print{.pnprint{display:block;font-size:10pt;margin-top:4px}.cbody[hidden]{display:block!important}.tog{display:none!important}}
+button.tog{border:0;background:none;padding:2px 6px 2px 0;font-size:1.1rem;line-height:1.2;color:var(--muted);cursor:pointer}
+.cbody{display:grid;gap:10px}
 .sup .pn{font-family:var(--font-data);font-weight:500;overflow-wrap:anywhere}
 .sup .pr{font-family:var(--font-data);text-align:right;white-space:nowrap}
 .sup .yl{grid-column:2/-1;color:var(--muted);font-size:.82rem}
@@ -169,7 +171,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function name(p){return p.m.indexOf(p.b)===0?p.m:p.b+' '+p.m;}
   DATA.forEach(function(p,i){ p.i=i; p.n=name(p); });
-  var CL={}, OPENAP={}, PMSG={}, LASTF={}, SAVED={};
+  var CL={}, OPENAP={}, PMSG={}, LASTF={}, SAVED={}, COL={};
   function priceFor(c,x){ var k=x.t; if(c&&c.prices&&c.prices[k]!=null) return +c.prices[k]; if(SAVED[k]!=null) return +SAVED[k]; return x.p; }
   // printers a client has on their saved quotes: model index -> total qty, plus the parts picked
   function printersFor(c){
@@ -196,9 +198,10 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     var ps=printersFor(c), h='', t='Supplies for '+c.name+'\n';
     if(!ps.length){ out.innerHTML='<section class="card"><div class="hint">'+esc(c.name)+' has no printers saved yet. Add printers in a quote tool and press Save to client.</div></section>'; $('copycard').hidden=true; return; }
     h+='<section class="card"><h2>'+esc(c.name)+'</h2><div class="hint">'+ps.length+' printer model'+(ps.length>1?'s':'')+'. Prices in Canadian dollars: the client saved price, then your saved price, then list price. Eco fees not included.</div></section>';
+    if(ps.length>1) h+='<div class="hint noprint" style="padding:0 2px"><button class="link" type="button" data-colall="1">Collapse all</button> &nbsp;·&nbsp; <button class="link" type="button" data-colall="0">Expand all</button></div>';
     ps.forEach(function(e){
       var p=e.p; t+='\n'+name(p)+(e.qty>1?' x '+e.qty:'')+'\n';
-      h+='<section class="card"><div class="line-head"><h3>'+esc(name(p))+(e.qty>1?' <span class="type">x '+e.qty+'</span>':'')+'</h3><button class="del noprint" type="button" data-rm="'+p.i+'" aria-label="Remove '+esc(name(p))+' from this client" title="Remove from client">&times;</button></div><div class="type">'+esc(p.t||'')+'</div>';
+      h+='<section class="card"><div class="line-head"><button class="tog noprint" type="button" data-col="'+p.i+'" aria-expanded="'+(COL[p.i]?'false':'true')+'" aria-label="'+(COL[p.i]?'Expand ':'Collapse ')+esc(name(p))+'">'+(COL[p.i]?'&#9656;':'&#9662;')+'</button><h3 style="flex:1">'+esc(name(p))+(e.qty>1?' <span class="type">x '+e.qty+'</span>':'')+'</h3><button class="del noprint" type="button" data-rm="'+p.i+'" aria-label="Remove '+esc(name(p))+' from this client" title="Remove from client">&times;</button></div><div class="type">'+esc(p.t||'')+'</div><div class="cbody"'+(COL[p.i]?' hidden':'')+'>';
       var any=false, cs=(c.csup&&c.csup[p.i])||{hidden:[],extra:[]}, hid=cs.hidden||[], ext=cs.extra||[], nh=0;
       [['Toner',p.c],['Drum',p.d]].forEach(function(g){
         g[1].forEach(function(x){
@@ -229,7 +232,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
       var pn=((c.pnotes&&c.pnotes[p.i])||'');
       h+='<label class="pnote noprint">Printer note<input type="text" data-pn="'+p.i+'" maxlength="500" autocomplete="off" placeholder="Location, serial number, anything to remember" value="'+esc(pn)+'"></label>';
       if(pn){ h+='<div class="pnprint">Note: '+esc(pn)+'</div>'; t+='  Note: '+pn+'\n'; }
-      h+='</section>';
+      h+='</div></section>';
     });
     if((c.notes||'').trim()) t+='\nNotes: '+c.notes.trim()+'\n';
     out.innerHTML=h; $('txt').value=t;
@@ -293,6 +296,8 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
   })();
   $('pick').addEventListener('change',function(){ var v=this.value.trim().toLowerCase(); if(DATA.some(function(p){return sNorm(p.n)===sNorm(v);})) doAdd(); });
   $('out').addEventListener('click',function(e){
+    var tb=e.target.closest('button[data-col]'); if(tb){ var kk=tb.getAttribute('data-col'); COL[kk]=!COL[kk]; render(); return; }
+    var ca=e.target.closest('button[data-colall]'); if(ca){ var vv=ca.getAttribute('data-colall')==='1'; printersFor(CL[$('sel').value]).forEach(function(x){ COL[x.p.i]=vv; }); render(); return; }
     var b=e.target.closest('button[data-rm]'); if(!b) return;
     var id=$('sel').value, c=CL[id], k=+b.getAttribute('data-rm'); if(!c) return;
     if(!confirm('Remove '+DATA[k].n+' from '+c.name+'? It is removed from their saved quotes.')) return;

@@ -197,7 +197,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     if(!c){ out.innerHTML=''; $('copycard').hidden=true; return; }
     var ps=printersFor(c), h='', t='Supplies for '+c.name+'\n';
     if(!ps.length){ out.innerHTML='<section class="card"><div class="hint">'+esc(c.name)+' has no printers saved yet. Add printers in a quote tool and press Save to client.</div></section>'; $('copycard').hidden=true; return; }
-    h+='<section class="card"><h2>'+esc(c.name)+'</h2><div class="hint">'+ps.length+' printer model'+(ps.length>1?'s':'')+'. Prices in Canadian dollars: the client saved price, then your saved price, then list price. Eco fees not included.</div></section>';
+    h+='<section class="card"><h2>'+esc(c.name)+'</h2><div class="hint noprint"><a href="customers.html">Customer details and quotes</a></div><div class="hint">'+ps.length+' printer model'+(ps.length>1?'s':'')+'. Prices in Canadian dollars: the client saved price, then your saved price, then list price. Eco fees not included.</div></section>';
     if(ps.length>1) h+='<div class="hint noprint" style="padding:0 2px"><button class="link" type="button" data-colall="1">Collapse all</button> &nbsp;·&nbsp; <button class="link" type="button" data-colall="0">Expand all</button></div>';
     ps.forEach(function(e){
       var p=e.p; t+='\n'+name(p)+(e.qty>1?' x '+e.qty:'')+'\n';
@@ -244,6 +244,7 @@ var DATA = [{"b":"Brother","m":"HL-L2405W","t":"Mono laser printer","p":null,"c"
     var h='<option value="">'+(ids.length?'Choose a client':'No saved clients yet')+'</option>';
     ids.forEach(function(i){ h+='<option value="'+esc(i)+'">'+esc(CL[i].name)+'</option>'; });
     $('sel').innerHTML=h;
+    try{ var qc=new URLSearchParams(location.search).get('c'); if(qc&&CL[qc]){ $('sel').value=qc; localStorage.setItem('supplies-client',qc); render(); return; } }catch(e){}
     try{ var last=localStorage.getItem('supplies-client'); if(last&&CL[last]){ $('sel').value=last; render(); } }catch(e){}
   }
 
